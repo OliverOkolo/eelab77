@@ -1,0 +1,460 @@
+/*
+ * components.css — EElab77
+ * Every reusable UI component. Same radius, same shadow,
+ * same padding logic across every page. Never redefine
+ * a button or card in a page-specific file.
+ *
+ * Contents:
+ *   1. Buttons
+ *   2. Badges
+ *   3. Cards
+ *   4. Form controls (range, select)
+ *   5. Modals
+ *   6. Stat cells
+ *   7. Log output
+ */
+
+
+/* ─────────────────────────────────────────────────────────────
+   1. BUTTONS
+───────────────────────────────────────────────────────────── */
+
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-2);
+  font-family: var(--font-sans);
+  font-size: var(--text-sm);
+  font-weight: var(--weight-semibold);
+  line-height: 1;
+  padding: var(--space-2) var(--space-4);
+  border-radius: var(--radius-md);
+  border: 1px solid transparent;
+  cursor: pointer;
+  text-decoration: none;
+  white-space: nowrap;
+  transition:
+    background-color var(--duration-base) var(--ease-out),
+    border-color     var(--duration-base) var(--ease-out),
+    color            var(--duration-base) var(--ease-out),
+    box-shadow       var(--duration-base) var(--ease-out),
+    transform        var(--duration-fast) var(--ease-out);
+  user-select: none;
+}
+
+.btn:active { transform: translateY(1px); }
+
+/* Sizes */
+.btn--sm { font-size: var(--text-xs);  padding: var(--space-1) var(--space-3); border-radius: var(--radius-sm); }
+.btn--lg { font-size: var(--text-base); padding: var(--space-3) var(--space-6); border-radius: var(--radius-lg); }
+.btn--xl { font-size: var(--text-md);  padding: var(--space-4) var(--space-8); border-radius: var(--radius-lg); }
+.btn--block { width: 100%; }
+
+/* Variants */
+.btn--primary {
+  background: var(--color-text);
+  color: var(--color-text-inv);
+  border-color: var(--color-text);
+}
+.btn--primary:hover {
+  background: var(--color-green);
+  border-color: var(--color-green);
+  box-shadow: 0 0 20px var(--color-green-glow);
+}
+
+.btn--green {
+  background: var(--color-green);
+  color: var(--color-text-inv);
+  border-color: var(--color-green);
+}
+.btn--green:hover {
+  background: var(--color-green-lt);
+  border-color: var(--color-green-lt);
+  box-shadow: 0 4px 16px var(--color-green-glow);
+}
+
+.btn--amber {
+  background: var(--color-amber);
+  color: var(--color-text-inv);
+  border-color: var(--color-amber);
+}
+.btn--amber:hover {
+  background: var(--color-amber-lt);
+  border-color: var(--color-amber-lt);
+  box-shadow: 0 4px 16px var(--color-amber-glow);
+}
+
+.btn--ghost {
+  background: transparent;
+  color: var(--color-text-2);
+  border-color: var(--color-border-2);
+}
+.btn--ghost:hover {
+  background: var(--color-bg-overlay);
+  color: var(--color-text);
+  border-color: var(--color-border-3);
+}
+
+.btn--danger {
+  background: transparent;
+  color: var(--color-text-3);
+  border-color: var(--color-border);
+}
+.btn--danger:hover {
+  background: var(--color-red-dim);
+  color: var(--color-red);
+  border-color: var(--color-red);
+}
+
+/*
+ * Toggle button — used throughout instrument control panels.
+ * Add .is-active to activate, .is-active--amber for amber variant.
+ */
+.btn--toggle {
+  background: transparent;
+  color: var(--color-text-3);
+  border-color: var(--color-border);
+  font-family: var(--font-mono);
+  font-size: var(--text-xs);
+  letter-spacing: var(--tracking-wide);
+  text-transform: uppercase;
+}
+.btn--toggle:hover {
+  color: var(--color-text-2);
+  border-color: var(--color-border-2);
+  background: var(--color-bg-hover);
+}
+.btn--toggle.is-active {
+  background: var(--color-green-dim);
+  color: var(--color-green);
+  border-color: var(--color-green);
+}
+.btn--toggle.is-active--amber {
+  background: var(--color-amber-dim);
+  color: var(--color-amber);
+  border-color: var(--color-amber);
+}
+.btn--toggle.is-active--red {
+  background: var(--color-red-dim);
+  color: var(--color-red);
+  border-color: var(--color-red);
+}
+
+
+/* ─────────────────────────────────────────────────────────────
+   2. BADGES
+───────────────────────────────────────────────────────────── */
+
+.badge {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  font-family: var(--font-mono);
+  font-size: var(--text-xs);
+  font-weight: var(--weight-medium);
+  padding: 2px var(--space-2);
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--color-border);
+  color: var(--color-text-3);
+  letter-spacing: var(--tracking-wide);
+  text-transform: uppercase;
+  line-height: 1;
+}
+
+.badge--green {
+  color: var(--color-green);
+  border-color: var(--color-green);
+  background: var(--color-green-dim);
+}
+.badge--amber {
+  color: var(--color-amber);
+  border-color: var(--color-amber);
+  background: var(--color-amber-dim);
+}
+.badge--red {
+  color: var(--color-red);
+  border-color: var(--color-red);
+  background: var(--color-red-dim);
+}
+.badge--live {
+  color: var(--color-green);
+  border-color: var(--color-green);
+  background: var(--color-green-dim);
+  animation: badge-pulse 1.5s ease-in-out infinite;
+}
+
+@keyframes badge-pulse {
+  0%, 100% { opacity: 1; }
+  50%       { opacity: 0.4; }
+}
+
+/* Pill tag for feature lists */
+.tag {
+  display: inline-flex;
+  align-items: center;
+  font-family: var(--font-mono);
+  font-size: var(--text-xs);
+  font-weight: var(--weight-medium);
+  padding: 2px var(--space-2);
+  border-radius: var(--radius-pill);
+  background: var(--color-bg-overlay);
+  color: var(--color-text-3);
+  border: 1px solid var(--color-border);
+  letter-spacing: var(--tracking-wide);
+  white-space: nowrap;
+}
+
+
+/* ─────────────────────────────────────────────────────────────
+   3. CARDS
+───────────────────────────────────────────────────────────── */
+
+.card {
+  background: var(--color-bg-raised);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  padding: var(--space-6);
+  box-shadow: var(--shadow-sm);
+}
+
+.card--compact {
+  padding: var(--space-4);
+  border-radius: var(--radius-md);
+}
+
+.card--interactive {
+  transition:
+    border-color var(--duration-base) var(--ease-out),
+    box-shadow   var(--duration-base) var(--ease-out);
+}
+.card--interactive:hover {
+  border-color: var(--color-border-2);
+  box-shadow: var(--shadow-md);
+}
+
+
+/* ─────────────────────────────────────────────────────────────
+   4. FORM CONTROLS
+───────────────────────────────────────────────────────────── */
+
+.form-label {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  font-size: var(--text-xs);
+  font-weight: var(--weight-medium);
+  color: var(--color-text-3);
+  margin-bottom: var(--space-1);
+  text-transform: uppercase;
+  letter-spacing: var(--tracking-wide);
+}
+
+.form-label-value {
+  font-family: var(--font-mono);
+  font-size: var(--text-xs);
+  color: var(--color-text-2);
+  text-transform: none;
+  letter-spacing: 0;
+}
+
+/* Range slider */
+.range {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 100%;
+  height: 3px;
+  background: var(--color-border-2);
+  border-radius: var(--radius-pill);
+  outline: none;
+  cursor: pointer;
+}
+
+.range::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  background: var(--color-green);
+  box-shadow: 0 0 0 3px var(--color-green-dim);
+  cursor: pointer;
+  transition: box-shadow var(--duration-fast) var(--ease-out);
+}
+.range::-webkit-slider-thumb:hover {
+  box-shadow: 0 0 0 5px var(--color-green-glow);
+}
+
+.range--amber::-webkit-slider-thumb {
+  background: var(--color-amber);
+  box-shadow: 0 0 0 3px var(--color-amber-dim);
+}
+.range--amber::-webkit-slider-thumb:hover {
+  box-shadow: 0 0 0 5px var(--color-amber-glow);
+}
+
+/* Select */
+.select {
+  width: 100%;
+  padding: var(--space-2) var(--space-3);
+  padding-right: var(--space-8);
+  background-color: var(--color-bg);
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath d='M0 0l5 6 5-6z' fill='%234E6080'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right var(--space-3) center;
+  border: 1px solid var(--color-border-2);
+  border-radius: var(--radius-md);
+  color: var(--color-text);
+  font-family: var(--font-mono);
+  font-size: var(--text-xs);
+  appearance: none;
+  -webkit-appearance: none;
+  cursor: pointer;
+  outline: none;
+  transition: border-color var(--duration-base) var(--ease-out);
+}
+.select:focus  { border-color: var(--color-green); }
+.select option { background: var(--color-bg-raised); }
+
+
+/* ─────────────────────────────────────────────────────────────
+   5. MODALS
+───────────────────────────────────────────────────────────── */
+
+.modal-backdrop {
+  display: none;
+  position: fixed;
+  inset: 0;
+  background: rgba(7, 8, 15, 0.88);
+  z-index: var(--z-modal);
+  align-items: center;
+  justify-content: center;
+  backdrop-filter: blur(4px);
+}
+.modal-backdrop.is-open {
+  display: flex;
+  animation: backdrop-in var(--duration-base) var(--ease-out) both;
+}
+
+@keyframes backdrop-in {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+
+.modal {
+  background: var(--color-bg-raised);
+  border: 1px solid var(--color-border-2);
+  border-radius: var(--radius-xl);
+  width: min(720px, 90vw);
+  max-height: 84vh;
+  display: flex;
+  flex-direction: column;
+  box-shadow: var(--shadow-xl);
+  animation: modal-in var(--duration-base) var(--ease-out) both;
+}
+.modal--sm { width: min(560px, 90vw); }
+
+@keyframes modal-in {
+  from { transform: translateY(12px); opacity: 0; }
+  to   { transform: translateY(0);    opacity: 1; }
+}
+
+.modal__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: var(--space-4) var(--space-6);
+  border-bottom: 1px solid var(--color-border);
+  flex-shrink: 0;
+}
+
+.modal__title {
+  font-family: var(--font-mono);
+  font-size: var(--text-sm);
+  font-weight: var(--weight-medium);
+  color: var(--color-green);
+  letter-spacing: var(--tracking-wide);
+  text-transform: uppercase;
+}
+
+.modal__close {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: var(--space-6);
+  height: var(--space-6);
+  color: var(--color-text-3);
+  border-radius: var(--radius-md);
+  font-size: var(--text-lg);
+  line-height: 1;
+  transition: color var(--duration-fast), background var(--duration-fast);
+}
+.modal__close:hover { color: var(--color-text); background: var(--color-bg-hover); }
+
+.modal__body {
+  padding: var(--space-6);
+  overflow-y: auto;
+  flex: 1;
+}
+
+.modal__footer {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: var(--space-3);
+  padding: var(--space-4) var(--space-6);
+  border-top: 1px solid var(--color-border);
+  flex-shrink: 0;
+}
+
+
+/* ─────────────────────────────────────────────────────────────
+   6. STAT CELLS  (used in scope status bar)
+───────────────────────────────────────────────────────────── */
+
+.stat-cell {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding-inline: var(--space-3);
+}
+.stat-cell + .stat-cell {
+  border-left: 1px solid var(--color-border);
+}
+
+.stat-cell__name {
+  font-family: var(--font-mono);
+  font-size: var(--text-xs);
+  color: var(--color-text-3);
+  letter-spacing: var(--tracking-wide);
+  text-transform: uppercase;
+}
+
+.stat-cell__value {
+  font-family: var(--font-mono);
+  font-size: var(--text-sm);
+  color: var(--color-text);
+  font-weight: var(--weight-medium);
+}
+.stat-cell__value--ok   { color: var(--color-green); }
+.stat-cell__value--warn { color: var(--color-amber); }
+.stat-cell__value--err  { color: var(--color-red);   }
+
+
+/* ─────────────────────────────────────────────────────────────
+   7. LOG OUTPUT
+───────────────────────────────────────────────────────────── */
+
+.log {
+  font-family: var(--font-mono);
+  font-size: var(--text-xs);
+  display: flex;
+  flex-direction: column-reverse;
+  gap: 2px;
+  overflow-y: auto;
+}
+
+.log__line      { color: var(--color-text-3); }
+.log__line--ok  { color: #00A060; }
+.log__line--warn{ color: var(--color-amber); }
+.log__line--err { color: var(--color-red); }

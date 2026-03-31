@@ -1,0 +1,272 @@
+/*
+ * signal-generator.css — EElab77
+ * Styles specific to signal-generator.html only.
+ */
+
+.siggen-page {
+  padding-top: var(--nav-height);
+  min-height: 100vh;
+}
+
+.siggen-inner {
+  max-width: var(--max-width);
+  margin-inline: auto;
+  padding: var(--space-12) var(--page-padding-x) var(--space-20);
+  display: grid;
+  grid-template-columns: 1fr 380px;
+  grid-template-rows: auto 1fr;
+  gap: var(--space-8);
+  align-items: start;
+}
+
+/* Page header spans both columns */
+.siggen-header {
+  grid-column: 1 / -1;
+  padding-bottom: var(--space-8);
+  border-bottom: 1px solid var(--color-border);
+}
+
+.siggen-header__tag {
+  font-family: var(--font-mono);
+  font-size: var(--text-xs);
+  font-weight: var(--weight-medium);
+  color: var(--color-amber);
+  letter-spacing: var(--tracking-widest);
+  text-transform: uppercase;
+  margin-bottom: var(--space-3);
+}
+
+/* ── Controls column ── */
+.siggen-controls {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+
+.siggen-card__title {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  font-size: var(--text-sm);
+  font-weight: var(--weight-bold);
+  color: var(--color-text);
+  letter-spacing: var(--tracking-wide);
+  text-transform: uppercase;
+  margin-bottom: var(--space-5);
+}
+.siggen-card__title::before {
+  content: '';
+  width: 3px;
+  height: 14px;
+  background: var(--color-amber);
+  border-radius: var(--radius-pill);
+  flex-shrink: 0;
+}
+
+/* Waveform selector */
+.wave-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: var(--space-2);
+}
+
+.wave-btn {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-3) var(--space-2);
+  background: var(--color-bg);
+  border: 1.5px solid var(--color-border);
+  border-radius: var(--radius-md);
+  cursor: pointer;
+  transition:
+    border-color var(--duration-base) var(--ease-out),
+    background   var(--duration-base) var(--ease-out);
+}
+.wave-btn:hover  { border-color: var(--color-border-2); background: var(--color-bg-overlay); }
+.wave-btn.is-active { border-color: var(--color-amber); background: var(--color-amber-dim); }
+
+.wave-btn canvas { width: 56px; height: 28px; }
+
+.wave-btn__label {
+  font-family: var(--font-mono);
+  font-size: var(--text-xs);
+  color: var(--color-text-3);
+  font-weight: var(--weight-medium);
+}
+.wave-btn.is-active .wave-btn__label { color: var(--color-amber); }
+
+/* Info cells */
+.info-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--space-2);
+  margin-top: var(--space-3);
+}
+
+.info-cell {
+  background: var(--color-bg);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  padding: var(--space-3);
+}
+.info-cell__label {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  font-weight: var(--weight-medium);
+  color: var(--color-text-3);
+  text-transform: uppercase;
+  letter-spacing: var(--tracking-wide);
+  margin-bottom: 4px;
+}
+.info-cell__value {
+  font-family: var(--font-mono);
+  font-size: var(--text-base);
+  font-weight: var(--weight-medium);
+  color: var(--color-text);
+}
+
+/* RC result */
+.rc-result {
+  background: var(--color-bg);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  padding: var(--space-4);
+  margin-top: var(--space-4);
+}
+.rc-result__title {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  color: var(--color-text-3);
+  text-transform: uppercase;
+  letter-spacing: var(--tracking-wider);
+  margin-bottom: var(--space-3);
+}
+.rc-result__row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding-block: var(--space-2);
+  border-bottom: 1px solid var(--color-border);
+  font-size: var(--text-xs);
+  font-family: var(--font-mono);
+}
+.rc-result__row:last-child  { border-bottom: none; padding-bottom: 0; }
+.rc-result__name            { color: var(--color-text-2); }
+.rc-result__value           { color: var(--color-text); }
+.rc-result__value--good     { color: var(--color-green); }
+.rc-result__value--warn     { color: var(--color-amber); }
+
+/* Circuit diagram */
+.circuit-diagram {
+  background: var(--color-bg-deep);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  padding: var(--space-4);
+  margin-top: var(--space-4);
+}
+.circuit-diagram__label {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  color: var(--color-text-3);
+  letter-spacing: var(--tracking-wider);
+  text-transform: uppercase;
+  margin-bottom: var(--space-3);
+}
+.circuit-diagram__content {
+  font-family: var(--font-mono);
+  font-size: var(--text-xs);
+  color: var(--color-text-2);
+  white-space: pre;
+  line-height: var(--leading-loose);
+}
+
+/* ── Preview column ── */
+.siggen-preview {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+  position: sticky;
+  top: calc(var(--nav-height) + var(--space-8));
+}
+
+.siggen-preview__label {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  color: var(--color-text-3);
+  letter-spacing: var(--tracking-wider);
+  text-transform: uppercase;
+  margin-bottom: var(--space-2);
+}
+
+.siggen-preview__canvas-wrap {
+  background: var(--color-bg-deep);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+  aspect-ratio: 5 / 3;
+}
+.siggen-preview__canvas-wrap canvas { display: block; width: 100%; height: 100%; }
+
+/* Sketch output box */
+.sketch-box {
+  background: var(--color-bg-raised);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+  box-shadow: var(--shadow-sm);
+}
+.sketch-box__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: var(--space-3) var(--space-4);
+  border-bottom: 1px solid var(--color-border);
+  background: var(--color-bg-overlay);
+}
+.sketch-box__filename {
+  font-family: var(--font-mono);
+  font-size: var(--text-xs);
+  color: var(--color-text-3);
+  letter-spacing: var(--tracking-wide);
+}
+.sketch-box__actions { display: flex; gap: var(--space-2); }
+.sketch-box__code {
+  padding: var(--space-4);
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--color-text-2);
+  background: var(--color-bg-deep);
+  overflow-y: auto;
+  max-height: 420px;
+  white-space: pre;
+  line-height: var(--leading-loose);
+}
+
+/* ── Responsive ── */
+@media (max-width: 900px) {
+  .siggen-inner {
+    grid-template-columns: 1fr;
+  }
+  .siggen-preview {
+    position: static;
+  }
+}
+```
+
+---
+
+All 8 files are done. Every value references a token. No magic numbers anywhere.
+
+**Check your folder looks like this before moving on:**
+```
+eelab77/assets/css/
+├── tokens.css          ✓
+├── base.css            ✓
+├── components.css      ✓
+├── nav.css             ✓
+├── site.css            ✓
+├── instrument.css      ✓
+├── scope.css           ✓
+└── signal-generator.css ✓
