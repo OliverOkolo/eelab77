@@ -1,0 +1,496 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Multimeter — EElab77</title>
+  <meta name="description" content="EElab77 browser-based multimeter. DC voltage, current, resistance, continuity, frequency, duty cycle and diode test. Runs in Chrome via Web Serial.">
+
+  <!-- Favicon -->
+  <link rel="icon" type="image/svg+xml" href="assets/img/favicon.svg">
+
+  <!-- CSS — tokens first, then base, then components, then shared
+       instrument layout, then this page's specific styles -->
+  <link rel="stylesheet" href="assets/css/tokens.css">
+  <link rel="stylesheet" href="assets/css/base.css">
+  <link rel="stylesheet" href="assets/css/components.css">
+  <link rel="stylesheet" href="assets/css/instrument.css">
+  <link rel="stylesheet" href="assets/css/multimeter.css">
+</head>
+<body class="is-instrument">
+
+<div class="instrument-layout">
+
+  <!-- ═══════════════════════════════════════════════════════
+       INSTRUMENT NAV
+  ════════════════════════════════════════════════════════ -->
+  <header class="inst-nav">
+    <a href="multimeter.html" class="inst-nav__logo">EElab77</a>
+    <span class="inst-nav__sep">/</span>
+    <span class="inst-nav__page">Multimeter</span>
+
+    <!-- Status badges -->
+    <div class="inst-nav__badges">
+      <div class="badge"          id="dmm-conn-badge">DISCONNECTED</div>
+      <div class="badge badge--green" style="opacity:0.5;">DMM</div>
+    </div>
+
+    <a href="index.html" class="inst-nav__home">← Site</a>
+  </header>
+
+
+  <!-- ═══════════════════════════════════════════════════════
+       MAIN AREA — DMM display on top, strip chart below
+  ════════════════════════════════════════════════════════ -->
+  <main class="inst-main inst-main--dmm" id="inst-main">
+
+    <!-- ── DMM display area ── -->
+    <div class="dmm-display-area">
+
+      <!-- Hold badge — shown when hold is active -->
+      <div class="dmm-hold-badge" id="dmm-hold-badge">HOLD</div>
+
+      <div class="dmm-display">
+
+        <!-- Mode label — e.g. "DC Voltage" -->
+        <div class="dmm-mode-label" id="dmm-mode-label">DC Voltage</div>
+
+        <!-- Main reading row — number + unit -->
+        <div class="dmm-reading-row">
+          <div class="dmm-reading dmm-reading--voltage" id="dmm-reading">
+            0.000
+          </div>
+          <div class="dmm-unit" id="dmm-unit">V</div>
+        </div>
+
+        <!-- Overrange indicator — shown instead of reading -->
+        <div class="dmm-ol" id="dmm-ol">OL</div>
+
+        <!-- Continuity indicator circle — shown in CONT mode -->
+        <div class="cont-indicator is-open"
+             id="cont-indicator"
+             style="display:none;">&#9675;</div>
+
+        <!-- Diode forward voltage label — shown in DIODE mode -->
+        <div class="diode-vf" id="diode-vf" style="display:none;"></div>
+
+        <!-- Secondary reading row — e.g. Period alongside Freq -->
+        <div class="detail-rows" id="detail-rows" style="display:none;">
+          <div class="detail-item">
+            <div class="detail-item__label" id="detail-label-1"></div>
+            <div class="detail-item__value" id="detail-value-1"></div>
+          </div>
+        </div>
+
+      </div><!-- /.dmm-display -->
+
+      <!-- Mode selector buttons -->
+      <div class="mode-selector">
+
+        <button class="mode-btn is-active--dcv" id="mode-btn-1">
+          <span class="mode-btn__abbr">DCV</span>
+          <span class="mode-btn__label">DC Volt</span>
+        </button>
+
+        <button class="mode-btn" id="mode-btn-2">
+          <span class="mode-btn__abbr">DCA</span>
+          <span class="mode-btn__label">DC Current</span>
+        </button>
+
+        <button class="mode-btn" id="mode-btn-3">
+          <span class="mode-btn__abbr">RES</span>
+          <span class="mode-btn__label">Resistance</span>
+        </button>
+
+        <button class="mode-btn" id="mode-btn-4">
+          <span class="mode-btn__abbr">CONT</span>
+          <span class="mode-btn__label">Continuity</span>
+        </button>
+
+        <button class="mode-btn" id="mode-btn-5">
+          <span class="mode-btn__abbr">FREQ</span>
+          <span class="mode-btn__label">Frequency</span>
+        </button>
+
+        <button class="mode-btn" id="mode-btn-6">
+          <span class="mode-btn__abbr">DUTY</span>
+          <span class="mode-btn__label">Duty Cycle</span>
+        </button>
+
+        <button class="mode-btn" id="mode-btn-7">
+          <span class="mode-btn__abbr">DIODE</span>
+          <span class="mode-btn__label">Diode Test</span>
+        </button>
+
+      </div><!-- /.mode-selector -->
+
+    </div><!-- /.dmm-display-area -->
+
+
+    <!-- ── Strip chart area ── -->
+    <div class="dmm-chart-area">
+      <canvas id="strip-chart"></canvas>
+      <div class="chart-label">Reading history</div>
+      <div class="chart-timespan" id="chart-timespan"></div>
+    </div>
+
+
+    <!-- ── Connect overlay ── -->
+    <div class="connect-overlay" id="dmm-connect-overlay">
+      <div class="connect-overlay__icon">&#9883;</div>
+      <div class="connect-overlay__title">EELAB77 DMM</div>
+      <p class="connect-overlay__sub">
+        Flash the Arduino sketch, plug in via USB,<br>
+        select baud rate and click Connect.
+      </p>
+
+      <div class="connect-overlay__baud">
+        <span class="connect-overlay__baud-label">Baud rate:</span>
+        <select class="select" id="dmm-overlay-baud-select">
+          <option value="9600">9600</option>
+          <option value="57600">57600</option>
+          <option value="115200" selected>115200</option>
+          <option value="500000">500000</option>
+        </select>
+      </div>
+
+      <button class="btn btn--green btn--lg"
+              id="dmm-btn-connect-overlay">
+        Connect Device
+      </button>
+
+      <div class="connect-overlay__warn" id="dmm-no-serial-warn">
+        &#9888; Web Serial requires Chrome or Edge.
+      </div>
+      <div class="connect-overlay__note">
+        Need the sketch? Click Sketch in the sidebar &rarr;
+      </div>
+    </div>
+
+  </main><!-- /.inst-main -->
+
+
+  <!-- ═══════════════════════════════════════════════════════
+       STATUS BAR
+  ════════════════════════════════════════════════════════ -->
+  <div class="inst-statusbar">
+
+    <!-- Stats strip -->
+    <div class="inst-statusbar__stats">
+      <div class="stat-cell">
+        <div class="stat-cell__name">Bytes/s</div>
+        <div class="stat-cell__value" id="dmm-st-bps">&#8212;</div>
+      </div>
+      <div class="stat-cell">
+        <div class="stat-cell__name">Frames/s</div>
+        <div class="stat-cell__value" id="dmm-st-fps">&#8212;</div>
+      </div>
+      <div class="stat-cell">
+        <div class="stat-cell__name">Sync Err</div>
+        <div class="stat-cell__value" id="dmm-st-err">&#8212;</div>
+      </div>
+      <div class="stat-cell">
+        <div class="stat-cell__name">Health</div>
+        <div class="stat-cell__value" id="dmm-st-health">&#8212;</div>
+      </div>
+    </div>
+
+    <!-- Log -->
+    <div class="inst-statusbar__log-label">Log</div>
+    <div class="log" id="dmm-log"></div>
+
+  </div>
+
+
+  <!-- ═══════════════════════════════════════════════════════
+       CONTROLS SIDEBAR
+  ════════════════════════════════════════════════════════ -->
+  <aside class="inst-sidebar">
+
+    <!-- ── Connection ── -->
+    <div class="ctrl-section">
+      <div class="ctrl-section__title">Connection</div>
+      <div class="ctrl-row">
+        <div class="form-label">
+          Baud rate
+          <span class="form-label-value">match your sketch</span>
+        </div>
+        <select class="select" id="dmm-baud-select">
+          <option value="9600">9600</option>
+          <option value="57600">57600</option>
+          <option value="115200" selected>115200</option>
+          <option value="500000">500000</option>
+        </select>
+      </div>
+      <div class="ctrl-btn-row">
+        <button class="btn btn--toggle" id="dmm-btn-connect">
+          Connect
+        </button>
+        <button class="btn btn--toggle" id="dmm-btn-disconnect">
+          Disconnect
+        </button>
+      </div>
+      <div class="ctrl-btn-row">
+        <button class="btn btn--toggle" id="dmm-btn-sketch">
+          Sketch
+        </button>
+        <button class="btn btn--toggle" id="dmm-btn-diag">
+          Diagnose
+        </button>
+      </div>
+    </div>
+
+
+    <!-- ── Measurement control ── -->
+    <div class="ctrl-section">
+      <div class="ctrl-section__title">Measurement</div>
+      <div class="ctrl-btn-row">
+        <button class="btn btn--toggle" id="dmm-btn-hold">
+          Hold
+        </button>
+        <button class="btn btn--toggle" id="dmm-btn-reset">
+          Reset
+        </button>
+      </div>
+      <div class="ctrl-btn-row">
+        <button class="btn btn--toggle" id="dmm-btn-csv">
+          Export CSV
+        </button>
+      </div>
+    </div>
+
+
+    <!-- ── Min / Max / Avg ── -->
+    <div class="ctrl-section">
+      <div class="ctrl-section__title">Statistics</div>
+      <div class="stat-panel">
+        <div class="stat-panel__cell">
+          <div class="stat-panel__label">Min</div>
+          <div class="stat-panel__value stat-panel__value--min"
+               id="stat-min">&#8212;</div>
+        </div>
+        <div class="stat-panel__cell">
+          <div class="stat-panel__label">Max</div>
+          <div class="stat-panel__value stat-panel__value--max"
+               id="stat-max">&#8212;</div>
+        </div>
+        <div class="stat-panel__cell">
+          <div class="stat-panel__label">Avg</div>
+          <div class="stat-panel__value stat-panel__value--avg"
+               id="stat-avg">&#8212;</div>
+        </div>
+      </div>
+    </div>
+
+
+    <!-- ── Wiring guide ── -->
+    <div class="ctrl-section">
+      <div class="ctrl-section__title">Wiring Guide</div>
+      <div class="wiring-guide">
+        <div class="wiring-guide__title">Current mode</div>
+        <pre class="wiring-guide__content" id="wiring-content"></pre>
+      </div>
+    </div>
+
+
+    <!-- ── Range info ── -->
+    <div class="ctrl-section">
+      <div class="ctrl-section__title">Mode Notes</div>
+      <div style="
+        font-family: var(--font-mono);
+        font-size: var(--text-xs);
+        color: var(--color-text-3);
+        line-height: var(--leading-loose);
+      ">
+        <div id="mode-notes-dcv">
+          <strong style="color:var(--color-text-2);">DC Voltage</strong><br>
+          0&ndash;5V direct on A0.<br>
+          0&ndash;50V with 47k/5.1k divider.<br>
+          Accuracy: &plusmn;1% (10&ndash;90% FS).
+        </div>
+        <div id="mode-notes-dca" style="display:none;">
+          <strong style="color:var(--color-text-2);">DC Current</strong><br>
+          1&Omega; shunt on A0.<br>
+          Max: 1A continuous.<br>
+          Break circuit to insert shunt.
+        </div>
+        <div id="mode-notes-res" style="display:none;">
+          <strong style="color:var(--color-text-2);">Resistance</strong><br>
+          Best: 100&Omega;&ndash;100k&Omega;.<br>
+          Disconnect component first.<br>
+          10k&Omega; ref resistor required.
+        </div>
+        <div id="mode-notes-cont" style="display:none;">
+          <strong style="color:var(--color-text-2);">Continuity</strong><br>
+          Closed when R &lt; 50&Omega;.<br>
+          Same wiring as resistance.<br>
+          Visual indicator only (no buzzer).
+        </div>
+        <div id="mode-notes-freq" style="display:none;">
+          <strong style="color:var(--color-text-2);">Frequency</strong><br>
+          Signal on D8 (0&ndash;5V only).<br>
+          Range: ~1Hz to ~8MHz.<br>
+          Never exceed 5V on D8.
+        </div>
+        <div id="mode-notes-duty" style="display:none;">
+          <strong style="color:var(--color-text-2);">Duty Cycle</strong><br>
+          Signal on D8 (0&ndash;5V only).<br>
+          High time / period &times; 100%.<br>
+          Never exceed 5V on D8.
+        </div>
+        <div id="mode-notes-diode" style="display:none;">
+          <strong style="color:var(--color-text-2);">Diode Test</strong><br>
+          Same wiring as resistance.<br>
+          Reads forward voltage Vf.<br>
+          OL = open or reverse biased.
+        </div>
+      </div>
+    </div>
+
+  </aside>
+
+</div><!-- /.instrument-layout -->
+
+
+<!-- ═══════════════════════════════════════════════════════
+     SKETCH MODAL
+════════════════════════════════════════════════════════ -->
+<div class="modal-backdrop" id="dmm-sketch-modal-backdrop">
+  <div class="modal">
+
+    <div class="modal__header">
+      <div class="modal__title">Arduino Sketch &mdash; Multimeter</div>
+      <button class="modal__close" id="dmm-modal-close">&#10005;</button>
+    </div>
+
+    <div class="modal__body">
+      <pre id="dmm-sketch-text"
+           style="font-size:11px; line-height:var(--leading-loose);"></pre>
+    </div>
+
+    <div class="modal__footer">
+      <button class="btn btn--ghost btn--sm"
+              id="dmm-btn-copy-sketch">Copy</button>
+      <button class="btn btn--green btn--sm"
+              id="dmm-btn-dl-sketch">Download .ino</button>
+    </div>
+
+  </div>
+</div>
+
+
+<!-- ═══════════════════════════════════════════════════════
+     DIAGNOSTICS MODAL
+════════════════════════════════════════════════════════ -->
+<div class="modal-backdrop" id="dmm-diag-modal-backdrop">
+  <div class="modal modal--sm">
+
+    <div class="modal__header">
+      <div class="modal__title">Diagnostics</div>
+      <button class="modal__close" id="dmm-diag-close">&#10005;</button>
+    </div>
+
+    <div class="modal__body">
+
+      <div class="diag-section-title">System Checks</div>
+      <div id="dmm-diag-checks"></div>
+
+      <div class="diag-section-title">Serial Echo Test</div>
+      <p class="diag-trouble" style="margin-bottom:var(--space-3);">
+        Sends <strong>T</strong> to the Arduino. The sketch responds with
+        a human-readable self-test you can also verify in Arduino Serial
+        Monitor at the same baud rate.
+      </p>
+      <div class="serial-test-out is-empty" id="dmm-serial-test-out">
+        Output will appear here after running the test...
+      </div>
+      <div class="ctrl-btn-row" style="margin-top:var(--space-3);">
+        <button class="btn btn--toggle" id="dmm-btn-test">Run Test</button>
+        <button class="btn btn--toggle" id="dmm-btn-clear-test">Clear</button>
+      </div>
+
+      <div class="diag-section-title">Troubleshooting</div>
+      <div class="diag-trouble">
+        <strong>Reading jumps or is noisy</strong><br>
+        &rarr; Add 100nF capacitor from A0 to GND.<br>
+        &rarr; Shorten probe wires to reduce pickup.<br>
+        <br>
+        <strong>Resistance reads OL</strong><br>
+        &rarr; Check 10k&Omega; ref resistor is connected 5V&rarr;A0.<br>
+        &rarr; Disconnect component from circuit before measuring.<br>
+        <br>
+        <strong>Frequency reads 0 or OL</strong><br>
+        &rarr; Signal must be on D8, not A0.<br>
+        &rarr; Signal must be 0&ndash;5V logic. Never exceed 5V.<br>
+        &rarr; Signal must be at least 1Hz for Timer1 to capture.<br>
+        <br>
+        <strong>No frames received</strong><br>
+        &rarr; Baud rate mismatch &mdash; match selector to sketch.<br>
+        &rarr; Close Arduino Serial Monitor before connecting.<br>
+        <br>
+        <strong>Firefox not working</strong><br>
+        &rarr; Web Serial requires Chrome or Edge.
+      </div>
+
+    </div>
+
+    <div class="modal__footer">
+      <button class="btn btn--green btn--sm"
+              id="dmm-btn-run-checks">Run All Checks</button>
+    </div>
+
+  </div>
+</div>
+
+
+<!-- ═══════════════════════════════════════════════════════
+     JS — strict load order
+     1. multimeter-sketch.js   data  (EELAB_MULTIMETER_SKETCH)
+     2. multimeter-serial.js   serial layer  (EEDmmSerial)
+     3. multimeter-engine.js   processing    (EEDmmEngine)
+     4. multimeter-controls.js UI + drawing  (EEDmmControls)
+     5. nav.js                 active link
+════════════════════════════════════════════════════════ -->
+<script src="assets/js/multimeter-sketch.js"></script>
+<script src="assets/js/multimeter-serial.js"></script>
+<script src="assets/js/multimeter-engine.js"></script>
+<script src="assets/js/multimeter-controls.js"></script>
+<script src="assets/js/nav.js"></script>
+
+<!-- Wire mode notes visibility to mode buttons -->
+<script>
+(function () {
+  var noteMap = {
+    1: 'mode-notes-dcv',
+    2: 'mode-notes-dca',
+    3: 'mode-notes-res',
+    4: 'mode-notes-cont',
+    5: 'mode-notes-freq',
+    6: 'mode-notes-duty',
+    7: 'mode-notes-diode'
+  };
+
+  function showNote(modeCode) {
+    Object.keys(noteMap).forEach(function (k) {
+      var el = document.getElementById(noteMap[k]);
+      if (el) el.style.display = (+k === modeCode) ? 'block' : 'none';
+    });
+  }
+
+  document.addEventListener('DOMContentLoaded', function () {
+    /* Show DCV notes by default */
+    showNote(1);
+
+    /* Hook into each mode button after controls.js has wired them */
+    for (var code = 1; code <= 7; code++) {
+      (function (c) {
+        var btn = document.getElementById('mode-btn-' + c);
+        if (btn) btn.addEventListener('click', function () { showNote(c); });
+      }(code));
+    }
+  });
+}());
+</script>
+
+</body>
+</html>
