@@ -1,0 +1,577 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Oscilloscope — EElab77</title>
+  <meta name="description" content="EElab77 2-channel oscilloscope. Triggered capture, FFT, cursors, average, peak detect, and CSV export. Runs in Chrome via Web Serial.">
+
+  <!-- Favicon -->
+  <link rel="icon" type="image/svg+xml" href="assets/img/favicon.svg">
+
+  <!-- CSS — tokens first, then base, then components, then instrument-specific -->
+  <link rel="stylesheet" href="assets/css/tokens.css">
+  <link rel="stylesheet" href="assets/css/base.css">
+  <link rel="stylesheet" href="assets/css/components.css">
+  <link rel="stylesheet" href="assets/css/instrument.css">
+  <link rel="stylesheet" href="assets/css/scope.css">
+</head>
+<body class="is-instrument">
+
+<div class="instrument-layout">
+
+  <!-- ═══════════════════════════════════════════════════════
+       INSTRUMENT NAV
+  ════════════════════════════════════════════════════════ -->
+  <header class="inst-nav">
+    <a href="scope.html" class="inst-nav__logo">EElab77</a>
+    <span class="inst-nav__sep">/</span>
+    <span class="inst-nav__page">Oscilloscope</span>
+
+    <!-- Status badges -->
+    <div class="inst-nav__badges">
+      <div class="badge"          id="conn-badge">DISCONNECTED</div>
+      <div class="badge"          id="state-badge">IDLE</div>
+      <div class="badge badge--green"              id="ch1-badge">CH1</div>
+      <div class="badge badge--amber"              id="ch2-badge" style="opacity:0.35;">CH2</div>
+      <div class="badge"          id="acq-badge">NORMAL</div>
+    </div>
+
+    <a href="index.html" class="inst-nav__home">← Site</a>
+  </header>
+
+
+  <!-- ═══════════════════════════════════════════════════════
+       MAIN CANVAS AREA
+  ════════════════════════════════════════════════════════ -->
+  <main class="inst-main" id="inst-main">
+
+    <!-- Scope canvas — scope-render.js targets this by ID -->
+    <canvas id="scope-canvas"></canvas>
+
+    <!-- FFT canvas — shown below scope canvas when FFT is active -->
+    <canvas id="fft-canvas"></canvas>
+
+    <!-- ── Measurements overlay (top-left) ── -->
+    <div class="canvas-measurements">
+
+      <!-- CH1 row 1: freq, period -->
+      <div class="meas-row">
+        <span class="meas-label" style="color:var(--color-green);">━</span>
+        <span class="meas-label">F</span>
+        <span class="meas-val meas-val--ch1" id="m1-freq">—</span>
+        <span class="meas-label">Period</span>
+        <span class="meas-val meas-val--ch1" id="m1-period">—</span>
+      </div>
+
+      <!-- CH1 row 2: Vpp, Vmax, Vmin -->
+      <div class="meas-row">
+        <span class="meas-label" style="color:var(--color-green);">━</span>
+        <span class="meas-label">Vpp</span>
+        <span class="meas-val meas-val--ch1" id="m1-vpp">—</span>
+        <span class="meas-label">Vmax</span>
+        <span class="meas-val meas-val--ch1" id="m1-vmax">—</span>
+        <span class="meas-label">Vmin</span>
+        <span class="meas-val meas-val--ch1" id="m1-vmin">—</span>
+      </div>
+
+      <!-- CH1 row 3: DC, Vrms, Duty -->
+      <div class="meas-row">
+        <span class="meas-label" style="color:var(--color-green);">━</span>
+        <span class="meas-label">DC</span>
+        <span class="meas-val meas-val--ch1" id="m1-dc">—</span>
+        <span class="meas-label">Vrms</span>
+        <span class="meas-val meas-val--ch1" id="m1-vrms">—</span>
+        <span class="meas-label">Duty</span>
+        <span class="meas-val meas-val--ch1" id="m1-duty">—</span>
+      </div>
+
+      <!-- CH2 rows — hidden until CH2 is enabled -->
+      <div class="meas-row" id="ch2-meas-row" style="display:none;">
+        <span class="meas-label" style="color:var(--color-amber);">━</span>
+        <span class="meas-label">F</span>
+        <span class="meas-val meas-val--ch2" id="m2-freq">—</span>
+        <span class="meas-label">Vpp</span>
+        <span class="meas-val meas-val--ch2" id="m2-vpp">—</span>
+        <span class="meas-label">DC</span>
+        <span class="meas-val meas-val--ch2" id="m2-dc">—</span>
+      </div>
+      <div class="meas-row" id="ch2-meas-row-2" style="display:none;">
+        <span class="meas-label" style="color:var(--color-amber);">━</span>
+        <span class="meas-label">Vmax</span>
+        <span class="meas-val meas-val--ch2" id="m2-vmax">—</span>
+        <span class="meas-label">Vmin</span>
+        <span class="meas-val meas-val--ch2" id="m2-vmin">—</span>
+        <span class="meas-label">Vrms</span>
+        <span class="meas-val meas-val--ch2" id="m2-vrms">—</span>
+      </div>
+
+    </div>
+
+    <!-- ── Cursor panel overlay (top-right) ── -->
+    <div class="cursor-panel" id="cursor-panel">
+      <div class="cursor-panel__row">
+        <span class="cursor-panel__label">T1</span>
+        <span class="cursor-panel__val--t" id="cp-t1">—</span>
+      </div>
+      <div class="cursor-panel__row">
+        <span class="cursor-panel__label">T2</span>
+        <span class="cursor-panel__val--t" id="cp-t2">—</span>
+      </div>
+      <div class="cursor-panel__row">
+        <span class="cursor-panel__label">ΔT</span>
+        <span class="cursor-panel__val--t" id="cp-dt">—</span>
+      </div>
+      <div class="cursor-panel__row">
+        <span class="cursor-panel__label">1/ΔT</span>
+        <span class="cursor-panel__val--t" id="cp-f">—</span>
+      </div>
+      <div class="cursor-panel__divider"></div>
+      <div class="cursor-panel__row">
+        <span class="cursor-panel__label">V1</span>
+        <span class="cursor-panel__val--v" id="cp-v1">—</span>
+      </div>
+      <div class="cursor-panel__row">
+        <span class="cursor-panel__label">V2</span>
+        <span class="cursor-panel__val--v" id="cp-v2">—</span>
+      </div>
+      <div class="cursor-panel__row">
+        <span class="cursor-panel__label">ΔV</span>
+        <span class="cursor-panel__val--v" id="cp-dv">—</span>
+      </div>
+    </div>
+
+    <!-- ── Trigger state (bottom-left) ── -->
+    <div class="canvas-trig-state" id="trig-state-label"></div>
+
+    <!-- ── Timebase label (bottom-right) ── -->
+    <div class="canvas-timebase" id="timebase-label">—</div>
+
+    <!-- ── Connect overlay ── -->
+    <div class="connect-overlay" id="connect-overlay">
+      <div class="connect-overlay__icon">⚡</div>
+      <div class="connect-overlay__title">EELAB77</div>
+      <p class="connect-overlay__sub">
+        Flash the Arduino sketch, plug in via USB,<br>
+        select baud rate and click Connect.
+      </p>
+
+      <div class="connect-overlay__baud">
+        <span class="connect-overlay__baud-label">Baud rate:</span>
+        <select class="select" id="overlay-baud-select">
+          <option value="9600">9600</option>
+          <option value="19200">19200</option>
+          <option value="57600">57600</option>
+          <option value="115200" selected>115200</option>
+          <option value="250000">250000</option>
+          <option value="500000">500000</option>
+          <option value="1000000">1000000</option>
+        </select>
+      </div>
+
+      <button class="btn btn--green btn--lg" id="btn-connect-overlay">
+        Connect Device
+      </button>
+
+      <div class="connect-overlay__warn" id="no-serial-warn">
+        ⚠ Web Serial requires Chrome or Edge.
+      </div>
+      <div class="connect-overlay__note">
+        Need the sketch? Click Sketch in the sidebar →
+      </div>
+    </div>
+
+  </main>
+
+
+  <!-- ═══════════════════════════════════════════════════════
+       STATUS BAR
+  ════════════════════════════════════════════════════════ -->
+  <div class="inst-statusbar">
+
+    <!-- Stats strip -->
+    <div class="inst-statusbar__stats">
+      <div class="stat-cell">
+        <div class="stat-cell__name">Bytes/s</div>
+        <div class="stat-cell__value" id="st-bps">—</div>
+      </div>
+      <div class="stat-cell">
+        <div class="stat-cell__name">Frames/s</div>
+        <div class="stat-cell__value" id="st-fps">—</div>
+      </div>
+      <div class="stat-cell">
+        <div class="stat-cell__name">Sync Err</div>
+        <div class="stat-cell__value" id="st-err">—</div>
+      </div>
+      <div class="stat-cell">
+        <div class="stat-cell__name">Est SR</div>
+        <div class="stat-cell__value" id="st-sr">—</div>
+      </div>
+      <div class="stat-cell">
+        <div class="stat-cell__name">CH2 Frames</div>
+        <div class="stat-cell__value" id="st-ch2">—</div>
+      </div>
+      <div class="stat-cell">
+        <div class="stat-cell__name">Health</div>
+        <div class="stat-cell__value" id="st-health">—</div>
+      </div>
+    </div>
+
+    <!-- Log -->
+    <div class="inst-statusbar__log-label">Log</div>
+    <div class="log" id="scope-log"></div>
+
+  </div>
+
+
+  <!-- ═══════════════════════════════════════════════════════
+       CONTROLS SIDEBAR
+  ════════════════════════════════════════════════════════ -->
+  <aside class="inst-sidebar">
+
+    <!-- ── Connection ── -->
+    <div class="ctrl-section">
+      <div class="ctrl-section__title">Connection</div>
+      <div class="ctrl-row">
+        <div class="form-label">
+          Baud rate
+          <span class="form-label-value">match your sketch</span>
+        </div>
+        <select class="select" id="baud-select">
+          <option value="9600">9600</option>
+          <option value="19200">19200</option>
+          <option value="57600">57600</option>
+          <option value="115200" selected>115200</option>
+          <option value="250000">250000</option>
+          <option value="500000">500000</option>
+          <option value="1000000">1000000</option>
+        </select>
+      </div>
+      <div class="ctrl-btn-row">
+        <button class="btn btn--toggle" id="btn-connect">Connect</button>
+        <button class="btn btn--toggle btn--toggle" id="btn-disconnect"
+                style="color:var(--color-text-3);">Disconnect</button>
+      </div>
+      <div class="ctrl-btn-row">
+        <button class="btn btn--toggle" id="btn-sketch">Sketch</button>
+        <button class="btn btn--toggle" id="btn-diag">Diagnose</button>
+      </div>
+    </div>
+
+    <!-- ── Channels ── -->
+    <div class="ctrl-section">
+      <div class="ctrl-section__title">Channels</div>
+
+      <!-- Tab strip -->
+      <div class="ch-tabs">
+        <button class="ch-tab is-active--ch1" id="tab-ch1">CH1</button>
+        <button class="ch-tab"                id="tab-ch2">CH2</button>
+      </div>
+
+      <!-- CH1 panel -->
+      <div id="ch1-panel">
+        <div class="ctrl-btn-row">
+          <button class="btn btn--toggle is-active" id="btn-ch1-en"
+                  style="pointer-events:none; opacity:0.5;">Enabled</button>
+          <button class="btn btn--toggle" id="btn-ch1-ac">AC</button>
+          <button class="btn btn--toggle" id="btn-ch1-inv">Invert</button>
+        </div>
+        <div class="ctrl-row">
+          <div class="form-label">
+            V/div
+            <span class="form-label-value" id="lbl-ch1-vdiv">1.0V</span>
+          </div>
+          <input type="range" class="range" id="sl-ch1-vdiv"
+                 min="0" max="7" step="1" value="3">
+        </div>
+        <div class="ctrl-row">
+          <div class="form-label">
+            Offset
+            <span class="form-label-value" id="lbl-ch1-off">0%</span>
+          </div>
+          <input type="range" class="range" id="sl-ch1-off"
+                 min="-50" max="50" step="1" value="0">
+        </div>
+      </div>
+
+      <!-- CH2 panel — hidden by default -->
+      <div id="ch2-panel" style="display:none;">
+        <div class="ctrl-btn-row">
+          <button class="btn btn--toggle" id="btn-ch2-en">Enable CH2</button>
+          <button class="btn btn--toggle" id="btn-ch2-ac">AC</button>
+          <button class="btn btn--toggle" id="btn-ch2-inv">Invert</button>
+        </div>
+        <div class="ctrl-row">
+          <div class="form-label">
+            V/div
+            <span class="form-label-value" id="lbl-ch2-vdiv">1.0V</span>
+          </div>
+          <input type="range" class="range range--amber" id="sl-ch2-vdiv"
+                 min="0" max="7" step="1" value="3">
+        </div>
+        <div class="ctrl-row">
+          <div class="form-label">
+            Offset
+            <span class="form-label-value" id="lbl-ch2-off">0%</span>
+          </div>
+          <input type="range" class="range range--amber" id="sl-ch2-off"
+                 min="-50" max="50" step="1" value="0">
+        </div>
+      </div>
+    </div>
+
+    <!-- ── Acquisition ── -->
+    <div class="ctrl-section">
+      <div class="ctrl-section__title">Acquisition</div>
+
+      <div class="ctrl-btn-row">
+        <button class="btn btn--toggle is-active" id="btn-run">Run</button>
+        <button class="btn btn--toggle"           id="btn-pause">Pause</button>
+        <button class="btn btn--toggle"           id="btn-single">Single</button>
+      </div>
+
+      <div class="ctrl-btn-row">
+        <button class="btn btn--toggle is-active" id="btn-acq-normal">Normal</button>
+        <button class="btn btn--toggle"           id="btn-acq-avg">Avg</button>
+        <button class="btn btn--toggle"           id="btn-acq-peak">Peak</button>
+      </div>
+
+      <!-- Average count — hidden unless avg mode is active -->
+      <div class="ctrl-row" id="row-avg">
+        <div class="form-label">
+          Avg count
+          <span class="form-label-value" id="lbl-avg">8</span>
+        </div>
+        <input type="range" class="range" id="sl-avg"
+               min="0" max="5" step="1" value="2">
+      </div>
+
+      <div class="ctrl-btn-row">
+        <button class="btn btn--toggle" id="btn-rolling">Rolling</button>
+      </div>
+    </div>
+
+    <!-- ── Timebase ── -->
+    <div class="ctrl-section">
+      <div class="ctrl-section__title">Timebase</div>
+      <div class="ctrl-row">
+        <div class="form-label">
+          Time/div
+          <span class="form-label-value" id="lbl-tb">5ms</span>
+        </div>
+        <input type="range" class="range" id="sl-tb"
+               min="0" max="10" step="1" value="4">
+      </div>
+    </div>
+
+    <!-- ── Trigger ── -->
+    <div class="ctrl-section">
+      <div class="ctrl-section__title">Trigger</div>
+
+      <div class="ctrl-btn-row">
+        <button class="btn btn--toggle is-active" id="btn-trig-auto">Auto</button>
+        <button class="btn btn--toggle"           id="btn-trig-norm">Normal</button>
+        <button class="btn btn--toggle"           id="btn-trig-none">None</button>
+      </div>
+
+      <div class="ctrl-row">
+        <div class="form-label">
+          Source
+          <span class="form-label-value" id="lbl-trig-src">CH1</span>
+        </div>
+        <input type="range" class="range" id="sl-trig-src"
+               min="1" max="2" step="1" value="1">
+      </div>
+
+      <div class="ctrl-row">
+        <div class="form-label">
+          Level
+          <span class="form-label-value" id="lbl-trig-lv">2.50V</span>
+        </div>
+        <input type="range" class="range" id="sl-trig-lv"
+               min="0" max="100" step="1" value="50">
+        <div class="trig-bar"></div>
+      </div>
+
+      <div class="ctrl-btn-row">
+        <button class="btn btn--toggle is-active" id="btn-trig-rise">↑ Rise</button>
+        <button class="btn btn--toggle"           id="btn-trig-fall">↓ Fall</button>
+      </div>
+
+      <div class="ctrl-row">
+        <div class="form-label">
+          Holdoff
+          <span class="form-label-value" id="lbl-holdoff">20ms</span>
+        </div>
+        <input type="range" class="range" id="sl-holdoff"
+               min="0" max="8" step="1" value="2">
+      </div>
+    </div>
+
+    <!-- ── Cursors ── -->
+    <div class="ctrl-section">
+      <div class="ctrl-section__title">Cursors</div>
+      <div class="ctrl-btn-row">
+        <button class="btn btn--toggle" id="btn-cursors">Enable</button>
+        <button class="btn btn--toggle" id="btn-cur-reset">Reset</button>
+      </div>
+      <div style="
+        font-family: var(--font-mono);
+        font-size: var(--text-xs);
+        color: var(--color-text-3);
+        margin-top: var(--space-2);
+        line-height: var(--leading-relaxed);
+      ">
+        Drag <span style="color:var(--color-amber);">T1 / T2</span> time lines<br>
+        Drag <span style="color:var(--color-cyan);">V1 / V2</span> volt lines
+      </div>
+    </div>
+
+    <!-- ── Display ── -->
+    <div class="ctrl-section">
+      <div class="ctrl-section__title">Display</div>
+      <div class="ctrl-btn-row">
+        <button class="btn btn--toggle"           id="btn-fft">FFT</button>
+        <button class="btn btn--toggle is-active" id="btn-interp">Interp</button>
+        <button class="btn btn--toggle"           id="btn-fill">Fill</button>
+      </div>
+      <div class="ctrl-row">
+        <div class="form-label">
+          Persistence
+          <span class="form-label-value" id="lbl-persist">0%</span>
+        </div>
+        <input type="range" class="range" id="sl-persist"
+               min="0" max="95" step="5" value="0">
+      </div>
+    </div>
+
+    <!-- ── Export ── -->
+    <div class="ctrl-section">
+      <div class="ctrl-section__title">Export</div>
+      <div class="ctrl-btn-row">
+        <button class="btn btn--toggle" id="btn-png">PNG</button>
+        <button class="btn btn--toggle" id="btn-csv">CSV</button>
+      </div>
+    </div>
+
+  </aside>
+
+</div><!-- /.instrument-layout -->
+
+
+<!-- ═══════════════════════════════════════════════════════
+     SKETCH MODAL
+════════════════════════════════════════════════════════ -->
+<div class="modal-backdrop" id="sketch-modal-backdrop">
+  <div class="modal">
+
+    <div class="modal__header">
+      <div class="modal__title">Arduino Sketch — 2 Channel</div>
+      <button class="modal__close" id="modal-close">✕</button>
+    </div>
+
+    <div class="modal__body">
+      <pre id="sketch-text"
+           style="font-size:11px; line-height:var(--leading-loose);"></pre>
+    </div>
+
+    <div class="modal__footer">
+      <button class="btn btn--ghost btn--sm" id="btn-copy-sketch">Copy</button>
+      <button class="btn btn--green btn--sm" id="btn-dl-sketch">Download .ino</button>
+    </div>
+
+  </div>
+</div>
+
+
+<!-- ═══════════════════════════════════════════════════════
+     DIAGNOSTICS MODAL
+════════════════════════════════════════════════════════ -->
+<div class="modal-backdrop" id="diag-modal-backdrop">
+  <div class="modal modal--sm">
+
+    <div class="modal__header">
+      <div class="modal__title">Diagnostics</div>
+      <button class="modal__close" id="diag-close">✕</button>
+    </div>
+
+    <div class="modal__body">
+
+      <!-- System checks — populated by scope-controls.js -->
+      <div class="diag-section-title">System Checks</div>
+      <div id="diag-checks"></div>
+
+      <!-- Serial echo test -->
+      <div class="diag-section-title">Serial Echo Test</div>
+      <p class="diag-trouble" style="margin-bottom: var(--space-3);">
+        Sends <strong>T</strong> to the Arduino. The sketch responds with
+        human-readable text you can also verify in Arduino Serial Monitor.
+      </p>
+      <div class="serial-test-out is-empty" id="serial-test-out">
+        Output will appear here after running the test...
+      </div>
+      <div class="ctrl-btn-row" style="margin-top: var(--space-3);">
+        <button class="btn btn--toggle" id="btn-test">Run Test</button>
+        <button class="btn btn--toggle" id="btn-clear-test">Clear</button>
+      </div>
+
+      <!-- Troubleshooting guide -->
+      <div class="diag-section-title">Troubleshooting</div>
+      <div class="diag-trouble">
+        <strong>No data / blank waveform</strong><br>
+        → Baud rate mismatch — match selector to <code>#define BAUD_RATE</code> in sketch.<br>
+        → Close Arduino Serial Monitor — it locks the port.<br>
+        → Try a different USB cable (data cable, not charge-only).<br>
+        <br>
+        <strong>High sync error count</strong><br>
+        → Almost always a baud rate mismatch. Try 115200 first.<br>
+        → Try a slower ADC prescaler (PS_128) in the sketch.<br>
+        <br>
+        <strong>CH2 not showing</strong><br>
+        → Enable CH2 in the Channels panel.<br>
+        → Confirm <code>ch2Enable = true</code> in your sketch.<br>
+        <br>
+        <strong>Unstable waveform</strong><br>
+        → Adjust the trigger level to the midpoint of the signal.<br>
+        → Increase holdoff if the signal has high-frequency noise.<br>
+        <br>
+        <strong>Sketch upload fails</strong><br>
+        → Click Disconnect first — the web app holds the port.<br>
+        <br>
+        <strong>Firefox not working</strong><br>
+        → Web Serial requires Chrome or Edge. Firefox is not supported.
+      </div>
+
+    </div>
+
+    <div class="modal__footer">
+      <button class="btn btn--green btn--sm" id="btn-run-checks">
+        Run All Checks
+      </button>
+    </div>
+
+  </div>
+</div>
+
+
+<!-- ═══════════════════════════════════════════════════════
+     JS — strict load order
+     1. scope-sketch.js   data (EELAB_SKETCH string)
+     2. scope-serial.js   serial layer  (EESerial)
+     3. scope-engine.js   state machine (EEEngine)
+     4. scope-fft.js      FFT module    (EEFFT)
+     5. scope-render.js   canvas draw   (EERender)
+     6. scope-controls.js UI wiring     (EEControls)
+     7. nav.js            active link
+════════════════════════════════════════════════════════ -->
+<script src="assets/js/scope-sketch.js"></script>
+<script src="assets/js/scope-serial.js"></script>
+<script src="assets/js/scope-engine.js"></script>
+<script src="assets/js/scope-fft.js"></script>
+<script src="assets/js/scope-render.js"></script>
+<script src="assets/js/scope-controls.js"></script>
+<script src="assets/js/nav.js"></script>
+
+</body>
+</html>
+

@@ -1,0 +1,549 @@
+/*
+ * multimeter.css — EElab77
+ * ─────────────────────────────────────────────────────────────
+ * Layout and component styles for multimeter.html only.
+ * All shared tokens, resets, and component styles come from
+ * tokens.css, base.css, components.css, and instrument.css.
+ * This file only adds what is unique to the multimeter page.
+ *
+ * Contents:
+ *   1.  Page layout (instrument grid override for multimeter)
+ *   2.  DMM display — large numeric readout
+ *   3.  Mode selector buttons
+ *   4.  Range indicator
+ *   5.  Min / Max / Avg panel
+ *   6.  Strip chart
+ *   7.  Wiring guide panel
+ *   8.  Measurement detail rows
+ *   9.  Continuity and diode indicators
+ *   10. Responsive
+ * ─────────────────────────────────────────────────────────────
+ */
+
+
+/* ─────────────────────────────────────────────────────────────
+   1. PAGE LAYOUT
+   The multimeter uses the shared instrument-layout grid from
+   instrument.css but the main area is split differently:
+   top = DMM display, bottom = strip chart.
+───────────────────────────────────────────────────────────── */
+
+/*
+ * Override the inst-main to use flex column so the DMM display
+ * sits above the strip chart without fixed pixel heights.
+ */
+.inst-main--dmm {
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+/* Top display area — holds the big number and mode indicators */
+.dmm-display-area {
+  flex: 0 0 auto;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: var(--space-8) var(--space-6);
+  background: var(--color-bg-deep);
+  border-bottom: 1px solid var(--color-border);
+  min-height: 260px;
+  position: relative;
+}
+
+/* Bottom chart area — fills remaining space */
+.dmm-chart-area {
+  flex: 1 1 0;
+  position: relative;
+  overflow: hidden;
+  background: var(--color-bg-deep);
+}
+
+.dmm-chart-area canvas {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+
+/* ─────────────────────────────────────────────────────────────
+   2. DMM DISPLAY — LARGE NUMERIC READOUT
+───────────────────────────────────────────────────────────── */
+
+.dmm-display {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-3);
+}
+
+/*
+ * The main number. Uses tabular-nums so digits don't shift
+ * width as the reading changes.
+ */
+.dmm-reading {
+  font-family: var(--font-mono);
+  font-size: clamp(56px, 8vw, 88px);
+  font-weight: var(--weight-medium);
+  letter-spacing: -0.02em;
+  line-height: 1;
+  color: var(--color-green);
+  text-shadow: 0 0 32px var(--color-green-glow);
+  font-variant-numeric: tabular-nums;
+  transition: color var(--duration-base) var(--ease-out);
+  user-select: text;
+}
+
+/* Colour variants per mode */
+.dmm-reading--voltage  { color: var(--color-green); text-shadow: 0 0 32px var(--color-green-glow); }
+.dmm-reading--current  { color: var(--color-amber); text-shadow: 0 0 32px var(--color-amber-glow); }
+.dmm-reading--resist   { color: var(--color-blue);  text-shadow: 0 0 32px rgba(78,140,255,0.25); }
+.dmm-reading--freq     { color: var(--color-cyan);  text-shadow: 0 0 32px rgba(0,200,232,0.25); }
+.dmm-reading--cont     { color: var(--color-green); text-shadow: 0 0 32px var(--color-green-glow); }
+.dmm-reading--diode    { color: var(--color-amber); text-shadow: 0 0 32px var(--color-amber-glow); }
+.dmm-reading--overrange{ color: var(--color-red);   text-shadow: 0 0 32px var(--color-red-dim); }
+
+/* Unit suffix — smaller, right of the number */
+.dmm-unit {
+  font-family: var(--font-mono);
+  font-size: clamp(18px, 2.5vw, 28px);
+  font-weight: var(--weight-medium);
+  color: var(--color-text-3);
+  align-self: flex-end;
+  margin-bottom: 10px;
+  margin-left: var(--space-2);
+  letter-spacing: 0;
+}
+
+/* Wrapper that sits the reading and unit side by side */
+.dmm-reading-row {
+  display: flex;
+  align-items: flex-end;
+  gap: 0;
+}
+
+/* Mode label — above the number, small caps */
+.dmm-mode-label {
+  font-family: var(--font-mono);
+  font-size: var(--text-xs);
+  font-weight: var(--weight-medium);
+  color: var(--color-text-3);
+  letter-spacing: var(--tracking-widest);
+  text-transform: uppercase;
+}
+
+/* Range label — below the unit */
+.dmm-range-label {
+  font-family: var(--font-mono);
+  font-size: var(--text-xs);
+  color: var(--color-text-3);
+  letter-spacing: var(--tracking-wide);
+  margin-top: var(--space-1);
+}
+
+/* Overrange text */
+.dmm-ol {
+  font-family: var(--font-mono);
+  font-size: clamp(40px, 6vw, 68px);
+  font-weight: var(--weight-medium);
+  color: var(--color-red);
+  text-shadow: 0 0 24px var(--color-red-dim);
+  letter-spacing: 0.05em;
+  display: none;
+}
+.dmm-ol.is-visible { display: block; }
+.dmm-reading.is-hidden { display: none; }
+
+/* Hold indicator */
+.dmm-hold-badge {
+  position: absolute;
+  top: var(--space-4);
+  right: var(--space-4);
+  font-family: var(--font-mono);
+  font-size: var(--text-xs);
+  font-weight: var(--weight-medium);
+  color: var(--color-amber);
+  background: var(--color-amber-dim);
+  border: 1px solid var(--color-amber);
+  padding: 2px var(--space-2);
+  border-radius: var(--radius-sm);
+  letter-spacing: var(--tracking-wide);
+  text-transform: uppercase;
+  display: none;
+}
+.dmm-hold-badge.is-visible { display: block; }
+
+
+/* ─────────────────────────────────────────────────────────────
+   3. MODE SELECTOR BUTTONS
+───────────────────────────────────────────────────────────── */
+
+.mode-selector {
+  display: flex;
+  gap: var(--space-2);
+  flex-wrap: wrap;
+  justify-content: center;
+  margin-top: var(--space-4);
+}
+
+.mode-btn {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 3px;
+  padding: var(--space-2) var(--space-4);
+  background: var(--color-bg-raised);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  cursor: pointer;
+  transition:
+    border-color var(--duration-base) var(--ease-out),
+    background   var(--duration-base) var(--ease-out),
+    box-shadow   var(--duration-base) var(--ease-out);
+  user-select: none;
+}
+
+.mode-btn:hover {
+  border-color: var(--color-border-2);
+  background: var(--color-bg-overlay);
+}
+
+.mode-btn__abbr {
+  font-family: var(--font-mono);
+  font-size: var(--text-sm);
+  font-weight: var(--weight-semibold);
+  color: var(--color-text-2);
+  letter-spacing: var(--tracking-wide);
+  line-height: 1;
+}
+
+.mode-btn__label {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  color: var(--color-text-3);
+  letter-spacing: var(--tracking-wide);
+  line-height: 1;
+}
+
+/* Active state — colour per mode */
+.mode-btn.is-active--dcv {
+  border-color: var(--color-green);
+  background: var(--color-green-dim);
+  box-shadow: 0 0 12px var(--color-green-glow);
+}
+.mode-btn.is-active--dcv .mode-btn__abbr  { color: var(--color-green); }
+
+.mode-btn.is-active--dca {
+  border-color: var(--color-amber);
+  background: var(--color-amber-dim);
+  box-shadow: 0 0 12px var(--color-amber-glow);
+}
+.mode-btn.is-active--dca .mode-btn__abbr  { color: var(--color-amber); }
+
+.mode-btn.is-active--res {
+  border-color: var(--color-blue);
+  background: var(--color-blue-dim);
+}
+.mode-btn.is-active--res .mode-btn__abbr  { color: var(--color-blue); }
+
+.mode-btn.is-active--cont {
+  border-color: var(--color-green);
+  background: var(--color-green-dim);
+}
+.mode-btn.is-active--cont .mode-btn__abbr { color: var(--color-green); }
+
+.mode-btn.is-active--freq {
+  border-color: var(--color-cyan);
+  background: var(--color-cyan-dim);
+}
+.mode-btn.is-active--freq .mode-btn__abbr { color: var(--color-cyan); }
+
+.mode-btn.is-active--duty {
+  border-color: var(--color-cyan);
+  background: var(--color-cyan-dim);
+}
+.mode-btn.is-active--duty .mode-btn__abbr { color: var(--color-cyan); }
+
+.mode-btn.is-active--diode {
+  border-color: var(--color-amber);
+  background: var(--color-amber-dim);
+}
+.mode-btn.is-active--diode .mode-btn__abbr { color: var(--color-amber); }
+
+/* Disabled state — shown when mode cannot be used */
+.mode-btn.is-disabled {
+  opacity: 0.35;
+  cursor: not-allowed;
+  pointer-events: none;
+}
+
+
+/* ─────────────────────────────────────────────────────────────
+   4. RANGE INDICATOR (sidebar)
+───────────────────────────────────────────────────────────── */
+
+.range-indicator {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  margin-bottom: var(--space-3);
+}
+
+.range-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: var(--space-2) var(--space-3);
+  background: var(--color-bg);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  font-family: var(--font-mono);
+  font-size: var(--text-xs);
+  cursor: pointer;
+  transition: all var(--duration-base) var(--ease-out);
+}
+
+.range-item:hover {
+  border-color: var(--color-border-2);
+  background: var(--color-bg-overlay);
+}
+
+.range-item.is-active {
+  border-color: var(--color-green);
+  background: var(--color-green-dim);
+}
+
+.range-item__label { color: var(--color-text-2); }
+.range-item__max   { color: var(--color-text-3); }
+.range-item.is-active .range-item__label { color: var(--color-green); }
+
+
+/* ─────────────────────────────────────────────────────────────
+   5. MIN / MAX / AVG PANEL
+───────────────────────────────────────────────────────────── */
+
+.stat-panel {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: var(--space-2);
+  margin-bottom: var(--space-3);
+}
+
+.stat-panel__cell {
+  background: var(--color-bg);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  padding: var(--space-2) var(--space-3);
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.stat-panel__label {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  color: var(--color-text-3);
+  letter-spacing: var(--tracking-wide);
+  text-transform: uppercase;
+}
+
+.stat-panel__value {
+  font-family: var(--font-mono);
+  font-size: var(--text-sm);
+  font-weight: var(--weight-medium);
+  color: var(--color-text);
+  font-variant-numeric: tabular-nums;
+}
+
+.stat-panel__value--min { color: var(--color-blue); }
+.stat-panel__value--max { color: var(--color-amber); }
+.stat-panel__value--avg { color: var(--color-green); }
+
+
+/* ─────────────────────────────────────────────────────────────
+   6. STRIP CHART
+───────────────────────────────────────────────────────────── */
+
+.chart-label {
+  position: absolute;
+  top: var(--space-2);
+  left: var(--space-3);
+  font-family: var(--font-mono);
+  font-size: 10px;
+  color: var(--color-text-3);
+  letter-spacing: var(--tracking-wider);
+  text-transform: uppercase;
+  pointer-events: none;
+}
+
+.chart-timespan {
+  position: absolute;
+  top: var(--space-2);
+  right: var(--space-3);
+  font-family: var(--font-mono);
+  font-size: 10px;
+  color: var(--color-text-3);
+  pointer-events: none;
+}
+
+
+/* ─────────────────────────────────────────────────────────────
+   7. WIRING GUIDE PANEL
+───────────────────────────────────────────────────────────── */
+
+.wiring-guide {
+  background: var(--color-bg);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  padding: var(--space-3);
+  margin-bottom: var(--space-3);
+}
+
+.wiring-guide__title {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  font-weight: var(--weight-medium);
+  color: var(--color-text-3);
+  letter-spacing: var(--tracking-wider);
+  text-transform: uppercase;
+  margin-bottom: var(--space-2);
+}
+
+.wiring-guide__content {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  color: var(--color-text-2);
+  line-height: var(--leading-loose);
+  white-space: pre;
+}
+
+.wiring-guide__pin-a {
+  color: var(--color-green);
+  font-weight: var(--weight-semibold);
+}
+
+.wiring-guide__pin-d {
+  color: var(--color-amber);
+  font-weight: var(--weight-semibold);
+}
+
+.wiring-guide__warn {
+  color: var(--color-amber);
+}
+
+
+/* ─────────────────────────────────────────────────────────────
+   8. MEASUREMENT DETAIL ROWS
+   Secondary readings shown below the main display
+   e.g. "Period: 1.00 ms" shown alongside frequency
+───────────────────────────────────────────────────────────── */
+
+.detail-rows {
+  display: flex;
+  gap: var(--space-6);
+  justify-content: center;
+  flex-wrap: wrap;
+  margin-top: var(--space-3);
+}
+
+.detail-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+}
+
+.detail-item__label {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  color: var(--color-text-3);
+  letter-spacing: var(--tracking-wide);
+  text-transform: uppercase;
+}
+
+.detail-item__value {
+  font-family: var(--font-mono);
+  font-size: var(--text-sm);
+  font-weight: var(--weight-medium);
+  color: var(--color-text-2);
+  font-variant-numeric: tabular-nums;
+}
+
+
+/* ─────────────────────────────────────────────────────────────
+   9. CONTINUITY AND DIODE INDICATORS
+───────────────────────────────────────────────────────────── */
+
+/* Continuity — large visual indicator, green when closed */
+.cont-indicator {
+  width: 64px;
+  height: 64px;
+  border-radius: 50%;
+  border: 3px solid var(--color-border-2);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 28px;
+  transition: all var(--duration-base) var(--ease-out);
+  margin: var(--space-3) 0;
+}
+
+.cont-indicator.is-closed {
+  border-color: var(--color-green);
+  background: var(--color-green-dim);
+  box-shadow: 0 0 24px var(--color-green-glow);
+  animation: cont-pulse 0.6s ease-in-out infinite;
+}
+
+.cont-indicator.is-open {
+  border-color: var(--color-red);
+  background: var(--color-red-dim);
+}
+
+@keyframes cont-pulse {
+  0%, 100% { box-shadow: 0 0 16px var(--color-green-glow); }
+  50%       { box-shadow: 0 0 32px var(--color-green-glow); }
+}
+
+/* Diode forward voltage label */
+.diode-vf {
+  font-family: var(--font-mono);
+  font-size: var(--text-sm);
+  color: var(--color-text-2);
+  margin-top: var(--space-2);
+}
+
+.diode-vf strong {
+  color: var(--color-amber);
+  font-weight: var(--weight-semibold);
+}
+
+
+/* ─────────────────────────────────────────────────────────────
+   10. RESPONSIVE
+───────────────────────────────────────────────────────────── */
+
+@media (max-width: 768px) {
+  .dmm-reading {
+    font-size: 48px;
+  }
+
+  .mode-selector {
+    gap: var(--space-1);
+  }
+
+  .mode-btn {
+    padding: var(--space-1) var(--space-2);
+  }
+
+  .stat-panel {
+    grid-template-columns: 1fr 1fr 1fr;
+    gap: var(--space-1);
+  }
+
+  .dmm-display-area {
+    min-height: 200px;
+    padding: var(--space-4);
+  }
+}

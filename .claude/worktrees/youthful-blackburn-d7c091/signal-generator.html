@@ -1,0 +1,376 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Signal Generator — EElab77</title>
+  <meta name="description" content="EElab77 signal generator. Configure sine, square, triangle, and sawtooth waveforms. Live RC filter calculator. Download a ready-to-flash Arduino sketch.">
+
+  <!-- Favicon -->
+  <link rel="icon" type="image/svg+xml" href="assets/img/favicon.svg">
+
+  <!-- CSS — tokens first, then base, then components, then page-specific -->
+  <link rel="stylesheet" href="assets/css/tokens.css">
+  <link rel="stylesheet" href="assets/css/base.css">
+  <link rel="stylesheet" href="assets/css/components.css">
+  <link rel="stylesheet" href="assets/css/nav.css">
+  <link rel="stylesheet" href="assets/css/signal-generator.css">
+</head>
+<body>
+
+  <!-- ═══════════════════════════════════════════════════════
+       NAV — identical markup on every page, nav.js sets active
+  ════════════════════════════════════════════════════════ -->
+  <nav class="nav">
+    <a href="index.html" class="nav__logo">
+      <span class="nav__logo-mark">EElab77</span>
+    </a>
+
+    <ul class="nav__links">
+      <li><a href="index.html"            class="nav__link">Home</a></li>
+      <li><a href="scope.html"            class="nav__link">Oscilloscope</a></li>
+      <li><a href="signal-generator.html" class="nav__link">Signal Generator</a></li>
+      <li><a href="multimeter.html"       class="nav__link">Multimeter</a></li>
+    </ul>
+
+    <div class="nav__actions">
+      <a href="scope.html" class="btn btn--ghost">Open Scope</a>
+    </div>
+  </nav>
+
+
+  <!-- ═══════════════════════════════════════════════════════
+       PAGE WRAPPER
+  ════════════════════════════════════════════════════════ -->
+  <div class="siggen-page">
+    <div class="siggen-inner">
+
+
+      <!-- ── Page header (spans both columns) ── -->
+      <div class="siggen-header">
+        <div class="siggen-header__tag">Signal Generator</div>
+        <h1 style="
+          font-size: var(--text-3xl);
+          font-weight: var(--weight-extrabold);
+          letter-spacing: var(--tracking-tight);
+          color: var(--color-text);
+          margin-bottom: var(--space-3);
+          line-height: var(--leading-tight);
+        ">
+          Configure, calculate, flash.
+        </h1>
+        <p style="
+          font-size: var(--text-md);
+          color: var(--color-text-2);
+          max-width: 620px;
+          line-height: var(--leading-relaxed);
+        ">
+          Adjust the waveform type, frequency range, and baud rate below.
+          The RC filter values and Arduino sketch update live as you move
+          each slider. Download the sketch and flash it to your Arduino.
+        </p>
+      </div>
+
+
+      <!-- ═══════════════════════════════════════════════
+           CONTROLS COLUMN (left)
+      ════════════════════════════════════════════════ -->
+      <div class="siggen-controls">
+
+
+        <!-- ── Waveform type ── -->
+        <div class="card siggen-card">
+          <div class="siggen-card__title">Waveform Type</div>
+
+          <div class="wave-grid">
+
+            <button class="wave-btn is-active" id="wave-sine">
+              <canvas id="wc-sine"></canvas>
+              <span class="wave-btn__label">Sine</span>
+            </button>
+
+            <button class="wave-btn" id="wave-square">
+              <canvas id="wc-square"></canvas>
+              <span class="wave-btn__label">Square</span>
+            </button>
+
+            <button class="wave-btn" id="wave-triangle">
+              <canvas id="wc-triangle"></canvas>
+              <span class="wave-btn__label">Triangle</span>
+            </button>
+
+            <button class="wave-btn" id="wave-sawtooth">
+              <canvas id="wc-sawtooth"></canvas>
+              <span class="wave-btn__label">Sawtooth</span>
+            </button>
+
+          </div>
+        </div>
+
+
+        <!-- ── Frequency range ── -->
+        <div class="card siggen-card">
+          <div class="siggen-card__title">Frequency Range</div>
+
+          <div class="ctrl-row">
+            <div class="form-label">
+              Minimum frequency
+              <span class="form-label-value" id="lbl-fmin">10 Hz</span>
+            </div>
+            <input type="range" class="range" id="sl-fmin"
+                   min="1" max="50" step="1" value="10">
+          </div>
+
+          <div class="ctrl-row">
+            <div class="form-label">
+              Maximum frequency
+              <span class="form-label-value" id="lbl-fmax">500 Hz</span>
+            </div>
+            <input type="range" class="range" id="sl-fmax"
+                   min="50" max="2000" step="10" value="500">
+          </div>
+
+          <!-- Derived info cells -->
+          <div class="info-grid">
+            <div class="info-cell">
+              <div class="info-cell__label">Step size @ fmin</div>
+              <div class="info-cell__value" id="info-stepmin">—</div>
+            </div>
+            <div class="info-cell">
+              <div class="info-cell__label">Step size @ fmax</div>
+              <div class="info-cell__value" id="info-stepmax">—</div>
+            </div>
+            <div class="info-cell">
+              <div class="info-cell__label">Actual freq range</div>
+              <div class="info-cell__value" id="info-freqrange">—</div>
+            </div>
+            <div class="info-cell">
+              <div class="info-cell__label">Waveform</div>
+              <div class="info-cell__value" id="info-wavetype">Sine</div>
+            </div>
+          </div>
+        </div>
+
+
+        <!-- ── Timing and baud ── -->
+        <div class="card siggen-card">
+          <div class="siggen-card__title">Timing &amp; Baud Rate</div>
+
+          <div class="ctrl-row">
+            <div class="form-label">
+              Step delay
+              <span class="form-label-value" id="lbl-delay">20 μs</span>
+            </div>
+            <input type="range" class="range" id="sl-delay"
+                   min="5" max="200" step="5" value="20">
+          </div>
+
+          <div class="ctrl-row">
+            <div class="form-label">Baud rate</div>
+            <select class="select" id="sel-baud">
+              <option value="9600">9600 — safe for all boards</option>
+              <option value="57600">57600</option>
+              <option value="115200" selected>115200 — recommended</option>
+              <option value="500000">500000 — fast boards only</option>
+            </select>
+          </div>
+
+          <p style="
+            font-size: var(--text-xs);
+            color: var(--color-text-3);
+            font-family: var(--font-mono);
+            line-height: var(--leading-relaxed);
+            margin-top: var(--space-2);
+          ">
+            Step delay controls the maximum output frequency.<br>
+            Lower delay = higher max freq, but less timing headroom.<br>
+            20 μs is a reliable starting point for most boards.
+          </p>
+        </div>
+
+
+        <!-- ── RC low-pass filter ── -->
+        <div class="card siggen-card">
+          <div class="siggen-card__title">RC Low-Pass Filter</div>
+
+          <p style="
+            font-size: var(--text-sm);
+            color: var(--color-text-2);
+            line-height: var(--leading-relaxed);
+            margin-bottom: var(--space-5);
+          ">
+            Pin 9 outputs a 62.5 kHz PWM signal. This RC filter smooths it
+            into a clean waveform. Two stages give significantly better
+            carrier rejection than one.
+          </p>
+
+          <div class="ctrl-row">
+            <div class="form-label">
+              Resistor per stage
+              <span class="form-label-value" id="lbl-r">1 kΩ</span>
+            </div>
+            <input type="range" class="range range--amber" id="sl-r"
+                   min="1" max="20" step="1" value="1">
+          </div>
+
+          <div class="ctrl-row">
+            <div class="form-label">
+              Capacitor per stage
+              <span class="form-label-value" id="lbl-c">100 nF</span>
+            </div>
+            <input type="range" class="range range--amber" id="sl-c"
+                   min="1" max="20" step="1" value="10">
+          </div>
+
+          <!-- RC calculated values -->
+          <div class="rc-result">
+            <div class="rc-result__title">Calculated values — two stages</div>
+
+            <div class="rc-result__row">
+              <span class="rc-result__name">Cutoff frequency</span>
+              <span class="rc-result__value" id="rc-fc">—</span>
+            </div>
+            <div class="rc-result__row">
+              <span class="rc-result__name">Attenuation at 62.5 kHz carrier</span>
+              <span class="rc-result__value" id="rc-att">—</span>
+            </div>
+            <div class="rc-result__row">
+              <span class="rc-result__name">Attenuation at fmax</span>
+              <span class="rc-result__value" id="rc-attf">—</span>
+            </div>
+            <div class="rc-result__row">
+              <span class="rc-result__name">PWM carrier frequency</span>
+              <span class="rc-result__value">62.5 kHz</span>
+            </div>
+            <div class="rc-result__row">
+              <span class="rc-result__name">Assessment</span>
+              <span class="rc-result__value" id="rc-assess">—</span>
+            </div>
+          </div>
+
+          <!-- Circuit diagram -->
+          <div class="circuit-diagram">
+            <div class="circuit-diagram__label">Circuit diagram</div>
+            <pre class="circuit-diagram__content" id="circuit-content"></pre>
+          </div>
+
+        </div>
+
+
+      </div>
+      <!-- /.siggen-controls -->
+
+
+      <!-- ═══════════════════════════════════════════════
+           PREVIEW COLUMN (right, sticky)
+      ════════════════════════════════════════════════ -->
+      <div class="siggen-preview">
+
+        <!-- Live waveform preview canvas -->
+        <div>
+          <div class="siggen-preview__label">Live Preview</div>
+          <div class="siggen-preview__canvas-wrap">
+            <canvas id="preview-canvas"></canvas>
+          </div>
+        </div>
+
+        <!-- Output info cells -->
+        <div class="info-grid">
+          <div class="info-cell">
+            <div class="info-cell__label">Output range</div>
+            <div class="info-cell__value">0 – 5 V</div>
+          </div>
+          <div class="info-cell">
+            <div class="info-cell__label">Centre voltage</div>
+            <div class="info-cell__value">2.5 V</div>
+          </div>
+          <div class="info-cell">
+            <div class="info-cell__label">PWM carrier</div>
+            <div class="info-cell__value">62.5 kHz</div>
+          </div>
+          <div class="info-cell">
+            <div class="info-cell__label">ADC pin (scope)</div>
+            <div class="info-cell__value">A1 → A0</div>
+          </div>
+        </div>
+
+        <!-- Wiring reminder -->
+        <div class="card card--compact" style="
+          background: rgba(0,200,122,0.04);
+          border-color: rgba(0,200,122,0.18);
+        ">
+          <div style="
+            font-family: var(--font-mono);
+            font-size: var(--text-xs);
+            color: var(--color-text-3);
+            line-height: var(--leading-loose);
+          ">
+            <div style="color:var(--color-text-2); margin-bottom:var(--space-2);
+                        font-weight:var(--weight-semibold);">
+              Wiring reminder
+            </div>
+            Pin 9 → RC filter → Scope A0<br>
+            Pot wiper → A1  (optional)<br>
+            <span style="color:var(--color-amber);">
+              GND shared between both Arduinos
+            </span>
+          </div>
+        </div>
+
+        <!-- Generated sketch box -->
+        <div class="sketch-box">
+
+          <div class="sketch-box__header">
+            <span class="sketch-box__filename">signal_generator.ino</span>
+            <div class="sketch-box__actions">
+              <button class="btn btn--ghost btn--sm" id="btn-copy-sketch">
+                Copy
+              </button>
+              <button class="btn btn--amber btn--sm" id="btn-dl-sketch">
+                Download
+              </button>
+            </div>
+          </div>
+
+          <pre class="sketch-box__code" id="sketch-output"></pre>
+
+        </div>
+
+      </div>
+      <!-- /.siggen-preview -->
+
+
+    </div>
+    <!-- /.siggen-inner -->
+
+
+    <!-- ── Footer ── -->
+    <footer class="footer">
+      <a href="index.html" class="footer__logo">EElab77</a>
+
+      <nav class="footer__links">
+        <a href="scope.html"            class="footer__link">Oscilloscope</a>
+        <a href="signal-generator.html" class="footer__link">Signal Generator</a>
+        <a href="index.html#roadmap"    class="footer__link">Roadmap</a>
+      </nav>
+
+      <div class="footer__copy">
+        &copy; 2025 EElab77. All rights reserved.
+      </div>
+    </footer>
+
+  </div>
+  <!-- /.siggen-page -->
+
+
+  <!-- ═══════════════════════════════════════════════════════
+       JS — home-animations.js loaded first so waveShapes
+       is available on window.EElab77 before signal-generator.js runs.
+  ════════════════════════════════════════════════════════ -->
+  <script src="assets/js/home-animations.js"></script>
+  <script src="assets/js/signal-generator.js"></script>
+  <script src="assets/js/nav.js"></script>
+
+</body>
+</html>
+

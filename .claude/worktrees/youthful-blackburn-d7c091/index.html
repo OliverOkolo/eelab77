@@ -1,0 +1,697 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>EElab77 — Browser-Based Electronics Instruments</title>
+  <meta name="description" content="EElab77 turns a £4 Arduino into a functional oscilloscope and signal generator — running entirely in your browser. No installs, no drivers.">
+
+  <!-- Favicon -->
+  <link rel="icon" type="image/svg+xml" href="assets/img/favicon.svg">
+
+  <!-- CSS — load order matters: tokens first, then base, then components -->
+  <link rel="stylesheet" href="assets/css/tokens.css">
+  <link rel="stylesheet" href="assets/css/base.css">
+  <link rel="stylesheet" href="assets/css/components.css">
+  <link rel="stylesheet" href="assets/css/nav.css">
+  <link rel="stylesheet" href="assets/css/site.css">
+</head>
+<body class="site-page">
+
+  <!-- ═══════════════════════════════════════════════════════
+       NAV
+  ════════════════════════════════════════════════════════ -->
+  <nav class="nav">
+    <a href="index.html" class="nav__logo">
+      <span class="nav__logo-mark">EElab77</span>
+    </a>
+
+    <ul class="nav__links">
+      <li><a href="index.html"              class="nav__link">Home</a></li>
+      <li><a href="scope.html"              class="nav__link">Oscilloscope</a></li>
+      <li><a href="signal-generator.html"   class="nav__link">Signal Generator</a></li>
+      <li><a href="multimeter.html"         class="nav__link">Multimeter</a></li>
+      <li><a href="#roadmap"                class="nav__link">Roadmap</a></li>
+    </ul>
+
+    <div class="nav__actions">
+      <a href="scope.html"            class="btn btn--ghost">Open Scope</a>
+      <a href="signal-generator.html" class="btn btn--green">Signal Generator</a>
+    </div>
+  </nav>
+
+
+  <!-- ═══════════════════════════════════════════════════════
+       HERO
+  ════════════════════════════════════════════════════════ -->
+  <section class="hero">
+
+    <!-- Background canvas + glow blobs -->
+    <div class="hero__bg">
+      <div class="hero__bg-glow hero__bg-glow--1"></div>
+      <div class="hero__bg-glow hero__bg-glow--2"></div>
+      <canvas id="hero-bg-canvas" class="hero__bg-canvas"></canvas>
+    </div>
+
+    <div class="hero__inner">
+      <div class="hero__tag">Browser-based electronics instruments</div>
+
+      <h1 class="hero__title">
+        A real oscilloscope.<br>
+        In your <em>browser</em>.
+      </h1>
+
+      <p class="hero__body">
+        EElab77 turns a £4 Arduino into a functional oscilloscope and signal
+        generator — all running in Chrome with no installs, no drivers, and
+        no subscriptions.
+      </p>
+
+      <div class="hero__actions">
+        <a href="scope.html"            class="btn btn--primary btn--lg">Open Oscilloscope →</a>
+        <a href="signal-generator.html" class="btn btn--ghost   btn--lg">Signal Generator</a>
+      </div>
+
+      <div class="hero__proof">
+        <span>✓ Chrome &amp; Edge</span>
+        <span class="hero__proof-dot"></span>
+        <span>✓ No install needed</span>
+        <span class="hero__proof-dot"></span>
+        <span>✓ Arduino Uno / Nano / Mega</span>
+        <span class="hero__proof-dot"></span>
+        <span>✓ 2-channel</span>
+      </div>
+    </div>
+
+    <!-- Stats bar -->
+    <div class="hero__stats">
+      <div class="hero__stat">
+        <div class="hero__stat-num">~£4</div>
+        <div class="hero__stat-label">Hardware cost</div>
+      </div>
+      <div class="hero__stat">
+        <div class="hero__stat-num">9.6k</div>
+        <div class="hero__stat-label">Samples / sec</div>
+      </div>
+      <div class="hero__stat">
+        <div class="hero__stat-num">10-bit</div>
+        <div class="hero__stat-label">ADC resolution</div>
+      </div>
+      <div class="hero__stat">
+        <div class="hero__stat-num">2ch</div>
+        <div class="hero__stat-label">Channels</div>
+      </div>
+    </div>
+
+  </section>
+
+
+  <!-- ═══════════════════════════════════════════════════════
+       FEATURES
+  ════════════════════════════════════════════════════════ -->
+  <section id="features" class="section">
+    <div class="section__header--center">
+      <div class="section__label">Features</div>
+      <h2 class="section__title">Not a toy. A real instrument.</h2>
+      <p class="section__sub">
+        Built with the same features you'd expect from a bench scope —
+        just running in a browser tab.
+      </p>
+    </div>
+
+    <div class="page-container">
+      <div class="features-grid">
+
+        <div class="card card--interactive">
+          <div class="feature-card__icon">📡</div>
+          <div class="feature-card__title">Plug and play via Web Serial</div>
+          <p class="feature-card__body">
+            Chrome's Web Serial API talks directly to the Arduino over USB.
+            No drivers, no middleware, no server. Flash once, open the page,
+            click Connect.
+          </p>
+        </div>
+
+        <div class="card card--interactive">
+          <div class="feature-card__icon">⚡</div>
+          <div class="feature-card__title">Stable triggered capture</div>
+          <p class="feature-card__body">
+            A proper hardware-style trigger state machine — armed, triggered,
+            holdoff. Waveforms lock solid on screen instead of drifting.
+          </p>
+        </div>
+
+        <div class="card card--interactive">
+          <div class="feature-card__icon">📊</div>
+          <div class="feature-card__title">2-channel with independent controls</div>
+          <p class="feature-card__body">
+            Sample A0 and A1 simultaneously. Each channel has its own V/div,
+            offset, AC coupling, invert, and colour. CH2 trigger support
+            included.
+          </p>
+        </div>
+
+        <div class="card card--interactive">
+          <div class="feature-card__icon">🔢</div>
+          <div class="feature-card__title">FFT frequency spectrum</div>
+          <p class="feature-card__body">
+            Live Fast Fourier Transform with a Hann window and dBV scale.
+            Split-screen view alongside the time-domain trace, for both
+            channels.
+          </p>
+        </div>
+
+        <div class="card card--interactive">
+          <div class="feature-card__icon">📐</div>
+          <div class="feature-card__title">Cursors with ΔT / ΔV readout</div>
+          <p class="feature-card__body">
+            Drag time and voltage cursor lines on the canvas. A readout panel
+            shows T1, T2, ΔT, 1/ΔT (frequency), V1, V2, and ΔV in real time.
+          </p>
+        </div>
+
+        <div class="card card--interactive">
+          <div class="feature-card__icon">🧮</div>
+          <div class="feature-card__title">Average and peak detect</div>
+          <p class="feature-card__body">
+            Stack 2–64 captures and average them to cut noise. Peak detect
+            holds the element-wise envelope across all captures to expose
+            glitches.
+          </p>
+        </div>
+
+        <div class="card card--interactive">
+          <div class="feature-card__icon">📤</div>
+          <div class="feature-card__title">Export PNG and CSV</div>
+          <p class="feature-card__body">
+            Save the current waveform as a PNG screenshot, or as a CSV with
+            time, raw ADC, and voltage columns — ready to open in MATLAB,
+            Python, or Excel.
+          </p>
+        </div>
+
+        <div class="card card--interactive">
+          <div class="feature-card__icon">🩺</div>
+          <div class="feature-card__title">Built-in diagnostics</div>
+          <p class="feature-card__body">
+            Live bytes/sec, frame health percentage, sync error count, and a
+            serial echo test that reads ADC values from the Arduino directly
+            into the browser.
+          </p>
+        </div>
+
+        <div class="card card--interactive">
+          <div class="feature-card__icon">🔧</div>
+          <div class="feature-card__title">AC coupling and invert</div>
+          <p class="feature-card__body">
+            AC coupling subtracts the DC component to centre the signal on
+            screen. Invert flips the trace. Both work on top of any
+            acquisition mode.
+          </p>
+        </div>
+
+      </div>
+    </div>
+  </section>
+
+
+  <!-- ═══════════════════════════════════════════════════════
+       HOW IT WORKS
+  ════════════════════════════════════════════════════════ -->
+  <section id="how" class="section section--tight">
+    <div class="section__header--center">
+      <div class="section__label">Setup</div>
+      <h2 class="section__title">Three steps. That's it.</h2>
+      <p class="section__sub">
+        Getting started takes about five minutes from a cold start.
+      </p>
+    </div>
+
+    <div class="page-container">
+      <div class="steps-row">
+
+        <div class="step">
+          <div class="step__circle">01</div>
+          <h3 class="step__title">Flash the sketch</h3>
+          <p class="step__body">
+            Click "Get Sketch" in the scope, copy the code into Arduino IDE,
+            and upload it to your Arduino. Takes about two minutes.
+          </p>
+        </div>
+
+        <div class="step">
+          <div class="step__circle">02</div>
+          <h3 class="step__title">Wire your signal</h3>
+          <p class="step__body">
+            Connect your signal to A0 for CH1 and A1 for CH2. Signal must be
+            0–5 V GND-referenced. Use a voltage divider for protection on
+            real-world signals.
+          </p>
+        </div>
+
+        <div class="step">
+          <div class="step__circle">03</div>
+          <h3 class="step__title">Open and connect</h3>
+          <p class="step__body">
+            Open the scope in Chrome or Edge, select your baud rate, click
+            Connect, and choose the COM port. The waveform appears
+            immediately.
+          </p>
+        </div>
+
+      </div>
+    </div>
+  </section>
+
+
+  <!-- ═══════════════════════════════════════════════════════
+       INSTRUMENTS
+  ════════════════════════════════════════════════════════ -->
+  <section id="instruments" class="section">
+    <div class="page-container">
+      <div class="section__label">Instruments</div>
+      <h2 class="section__title">What's available today</h2>
+      <p class="section__sub">
+        Each instrument is a single HTML file. Host it anywhere, or just
+        open it locally from your desktop.
+      </p>
+
+      <div class="instruments-grid" style="margin-top: 40px;">
+
+        <!-- Scope card -->
+        <a href="scope.html" class="card card--interactive instrument-card">
+          <div>
+            <span class="badge badge--green">Available</span>
+            <h3 class="instrument-card__title">Oscilloscope</h3>
+            <p class="instrument-card__body">
+              2-channel triggered capture with FFT, cursors, averaging,
+              peak detect, AC coupling, invert, rolling mode, and
+              PNG / CSV export. Runs in the browser via Web Serial.
+            </p>
+            <!-- Mini animated preview -->
+            <div class="scope-preview" style="margin-top: 16px;">
+              <canvas id="scope-card-canvas"></canvas>
+            </div>
+          </div>
+          <div class="instrument-card__footer">
+            <div class="instrument-card__tags">
+              <span class="tag">2ch</span>
+              <span class="tag">FFT</span>
+              <span class="tag">Cursors</span>
+              <span class="tag">Export</span>
+            </div>
+            <span class="instrument-card__link">Open →</span>
+          </div>
+        </a>
+
+        <!-- Signal generator card -->
+        <a href="signal-generator.html" class="card card--interactive instrument-card instrument-card--amber">
+          <div>
+            <span class="badge badge--amber">Available</span>
+            <h3 class="instrument-card__title">Signal Generator</h3>
+            <p class="instrument-card__body">
+              Configure sine, square, triangle, and sawtooth waveforms.
+              Adjust frequency range and step delay. Live RC filter
+              calculator with circuit diagram. Download a ready-to-flash
+              Arduino sketch.
+            </p>
+            <!-- Mini animated preview -->
+            <div class="scope-preview" style="margin-top: 16px;">
+              <canvas id="siggen-card-canvas"></canvas>
+            </div>
+          </div>
+          <div class="instrument-card__footer">
+            <div class="instrument-card__tags">
+              <span class="tag">Sine</span>
+              <span class="tag">Square</span>
+              <span class="tag">Triangle</span>
+              <span class="tag">RC Calc</span>
+            </div>
+            <span class="instrument-card__link">Open →</span>
+          </div>
+        </a>
+        
+        <!-- Multimeter card -->
+        <a href="multimeter.html" class="card card--interactive instrument-card">
+          <div>
+            <span class="badge badge--green">Available</span>
+            <h3 class="instrument-card__title">Multimeter</h3>
+            <p class="instrument-card__body">
+              DC voltage, DC current, resistance, continuity, frequency,
+              duty cycle, and diode test. Large DMM-style display with
+              30-second strip chart, min/max/avg tracking, and CSV export.
+            </p>
+          </div>
+          <div class="instrument-card__footer">
+            <div class="instrument-card__tags">
+              <span class="tag">DCV</span>
+              <span class="tag">RES</span>
+              <span class="tag">FREQ</span>
+              <span class="tag">CONT</span>
+            </div>
+            <span class="instrument-card__link">Open &rarr;</span>
+          </div>
+        </a>
+
+        <!-- ESP32 scope — coming soon -->
+        <div class="card instrument-card" style="opacity: 0.55; cursor: default;">
+          <div>
+            <span class="badge">Coming soon</span>
+            <h3 class="instrument-card__title" style="color: var(--color-text-2);">
+              ESP32 Oscilloscope
+            </h3>
+            <p class="instrument-card__body">
+              WebSocket streaming over Wi-Fi — works in any browser, not
+              just Chrome. Up to 200 kHz sample rate. Dual-core
+              architecture keeps sampling and streaming separate.
+            </p>
+          </div>
+          <div class="instrument-card__footer">
+            <div class="instrument-card__tags">
+              <span class="tag">Wi-Fi</span>
+              <span class="tag">200 kHz</span>
+              <span class="tag">Any browser</span>
+            </div>
+            <span style="font-size: var(--text-sm); color: var(--color-text-3);">
+              In development
+            </span>
+          </div>
+        </div>
+
+        <!-- Logic analyser — planned -->
+        <div class="card instrument-card" style="opacity: 0.55; cursor: default;">
+          <div>
+            <span class="badge">Planned</span>
+            <h3 class="instrument-card__title" style="color: var(--color-text-2);">
+              Logic Analyser
+            </h3>
+            <p class="instrument-card__body">
+              8-channel digital capture with UART, I2C, and SPI protocol
+              decode. Overlay decoded values directly on the timing
+              diagram in the browser.
+            </p>
+          </div>
+          <div class="instrument-card__footer">
+            <div class="instrument-card__tags">
+              <span class="tag">8ch</span>
+              <span class="tag">UART</span>
+              <span class="tag">I2C</span>
+              <span class="tag">SPI</span>
+            </div>
+            <span style="font-size: var(--text-sm); color: var(--color-text-3);">
+              Planned
+            </span>
+          </div>
+        </div>
+
+      </div>
+    </div>
+  </section>
+
+
+  <!-- ═══════════════════════════════════════════════════════
+       HARDWARE
+  ════════════════════════════════════════════════════════ -->
+  <section id="hardware" class="section section--tight">
+    <div class="page-container">
+      <div class="section__label">Hardware</div>
+      <h2 class="section__title">Everything you need costs about £4</h2>
+
+      <div style="
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 48px;
+        align-items: start;
+        margin-top: 40px;
+        max-width: 900px;
+      ">
+
+        <!-- Parts list -->
+        <div style="display: flex; flex-direction: column; gap: 12px;">
+
+          <div class="card card--compact" style="display: flex; align-items: flex-start; gap: 16px;">
+            <span style="font-size: 22px; flex-shrink: 0; margin-top: 2px;">🟦</span>
+            <div>
+              <div style="font-size: var(--text-base); font-weight: var(--weight-semibold); color: var(--color-text); margin-bottom: 3px;">
+                Arduino Uno, Nano, or Mega
+              </div>
+              <div style="font-size: var(--text-sm); color: var(--color-text-3);">
+                Any AVR-based Arduino. Clone Nanos work perfectly fine.
+              </div>
+              <div style="font-family: var(--font-mono); font-size: var(--text-xs); color: var(--color-green); margin-top: 4px;">
+                ~£3–8 / clone Nano ~£2
+              </div>
+            </div>
+          </div>
+
+          <div class="card card--compact" style="display: flex; align-items: flex-start; gap: 16px;">
+            <span style="font-size: 22px; flex-shrink: 0; margin-top: 2px;">🔌</span>
+            <div>
+              <div style="font-size: var(--text-base); font-weight: var(--weight-semibold); color: var(--color-text); margin-bottom: 3px;">
+                USB data cable
+              </div>
+              <div style="font-size: var(--text-sm); color: var(--color-text-3);">
+                Must be a data cable. A charge-only cable will not work
+                for serial communication.
+              </div>
+              <div style="font-family: var(--font-mono); font-size: var(--text-xs); color: var(--color-green); margin-top: 4px;">
+                Likely already have one
+              </div>
+            </div>
+          </div>
+
+          <div class="card card--compact" style="display: flex; align-items: flex-start; gap: 16px;">
+            <span style="font-size: 22px; flex-shrink: 0; margin-top: 2px;">🧱</span>
+            <div>
+              <div style="font-size: var(--text-base); font-weight: var(--weight-semibold); color: var(--color-text); margin-bottom: 3px;">
+                2× 1kΩ resistors, 2× 100nF capacitors
+              </div>
+              <div style="font-size: var(--text-sm); color: var(--color-text-3);">
+                For the RC low-pass filter on the signal generator output.
+              </div>
+              <div style="font-family: var(--font-mono); font-size: var(--text-xs); color: var(--color-green); margin-top: 4px;">
+                ~£0.10 total
+              </div>
+            </div>
+          </div>
+
+          <div class="card card--compact" style="display: flex; align-items: flex-start; gap: 16px;">
+            <span style="font-size: 22px; flex-shrink: 0; margin-top: 2px;">🌐</span>
+            <div>
+              <div style="font-size: var(--text-base); font-weight: var(--weight-semibold); color: var(--color-text); margin-bottom: 3px;">
+                Chrome or Edge browser
+              </div>
+              <div style="font-size: var(--text-sm); color: var(--color-text-3);">
+                Web Serial API is required. Firefox does not support it yet.
+              </div>
+              <div style="font-family: var(--font-mono); font-size: var(--text-xs); color: var(--color-green); margin-top: 4px;">
+                Free
+              </div>
+            </div>
+          </div>
+
+        </div>
+
+        <!-- Protection callout -->
+        <div class="card" style="
+          background: linear-gradient(135deg, rgba(0,200,122,0.06) 0%, transparent 60%);
+          border-color: rgba(0,200,122,0.2);
+        ">
+          <h3 style="
+            font-size: var(--text-xl);
+            font-weight: var(--weight-bold);
+            color: var(--color-text);
+            margin-bottom: 12px;
+            letter-spacing: var(--tracking-snug);
+          ">
+            Protect your Arduino
+          </h3>
+          <p style="
+            font-size: var(--text-sm);
+            color: var(--color-text-2);
+            line-height: var(--leading-relaxed);
+            margin-bottom: 24px;
+          ">
+            The Arduino's ADC input tolerates 0–5 V only. For real-world
+            signals, add a simple protection circuit: a 10kΩ series resistor
+            and two 1N4148 diodes clamping to GND and 5V. This prevents
+            the ADC from being damaged by overvoltage spikes.
+          </p>
+          <a href="scope.html" class="btn btn--green">Open Scope →</a>
+        </div>
+
+      </div>
+    </div>
+  </section>
+
+
+  <!-- ═══════════════════════════════════════════════════════
+       ROADMAP
+  ════════════════════════════════════════════════════════ -->
+  <section id="roadmap" class="section section--tight">
+    <div class="section__header--center">
+      <div class="section__label">Roadmap</div>
+      <h2 class="section__title">What's being built next</h2>
+    </div>
+
+    <div class="page-container">
+      <div class="roadmap-grid">
+
+        <div class="roadmap-item">
+          <div class="roadmap-item__dot roadmap-item__dot--done"></div>
+          <div>
+            <div class="roadmap-item__title">2-channel scope</div>
+            <div class="roadmap-item__body">Simultaneous A0 + A1 sampling</div>
+          </div>
+        </div>
+
+        <div class="roadmap-item">
+          <div class="roadmap-item__dot roadmap-item__dot--done"></div>
+          <div>
+            <div class="roadmap-item__title">FFT spectrum</div>
+            <div class="roadmap-item__body">Live Hann-windowed FFT view</div>
+          </div>
+        </div>
+
+        <div class="roadmap-item">
+          <div class="roadmap-item__dot roadmap-item__dot--done"></div>
+          <div>
+            <div class="roadmap-item__title">Cursor measurements</div>
+            <div class="roadmap-item__body">ΔT, 1/ΔT, ΔV readout panel</div>
+          </div>
+        </div>
+
+        <div class="roadmap-item">
+          <div class="roadmap-item__dot roadmap-item__dot--done"></div>
+          <div>
+            <div class="roadmap-item__title">Average &amp; peak modes</div>
+            <div class="roadmap-item__body">Noise reduction and glitch capture</div>
+          </div>
+        </div>
+
+        <div class="roadmap-item">
+          <div class="roadmap-item__dot roadmap-item__dot--done"></div>
+          <div>
+            <div class="roadmap-item__title">Signal generator</div>
+            <div class="roadmap-item__body">Sine, square, triangle, sawtooth</div>
+          </div>
+        </div>
+
+        <div class="roadmap-item">
+          <div class="roadmap-item__dot roadmap-item__dot--done"></div>
+          <div>
+            <div class="roadmap-item__title">RC filter calculator</div>
+            <div class="roadmap-item__body">Live cutoff and attenuation values</div>
+          </div>
+        </div>
+
+        <div class="roadmap-item">
+          <div class="roadmap-item__dot roadmap-item__dot--active"></div>
+          <div>
+            <div class="roadmap-item__title">ESP32 scope</div>
+            <div class="roadmap-item__body">Wi-Fi streaming, any browser</div>
+          </div>
+        </div>
+
+        <div class="roadmap-item">
+          <div class="roadmap-item__dot roadmap-item__dot--future"></div>
+          <div>
+            <div class="roadmap-item__title">Logic analyser</div>
+            <div class="roadmap-item__body">8-channel with protocol decode</div>
+          </div>
+        </div>
+
+        <div class="roadmap-item">
+          <div class="roadmap-item__dot roadmap-item__dot--future"></div>
+          <div>
+            <div class="roadmap-item__title">UART decode</div>
+            <div class="roadmap-item__body">Overlay decoded text on trace</div>
+          </div>
+        </div>
+
+        <div class="roadmap-item">
+          <div class="roadmap-item__dot roadmap-item__dot--future"></div>
+          <div>
+            <div class="roadmap-item__title">I2C / SPI decode</div>
+            <div class="roadmap-item__body">Bus protocol analysis</div>
+          </div>
+        </div>
+
+        <div class="roadmap-item">
+          <div class="roadmap-item__dot roadmap-item__dot--future"></div>
+          <div>
+            <div class="roadmap-item__title">Bode plot tool</div>
+            <div class="roadmap-item__body">Frequency response via sig gen + scope</div>
+          </div>
+        </div>
+
+        <div class="roadmap-item">
+          <div class="roadmap-item__dot roadmap-item__dot--future"></div>
+          <div>
+            <div class="roadmap-item__title">PWA / offline mode</div>
+            <div class="roadmap-item__body">Installable, works without internet</div>
+          </div>
+        </div>
+
+      </div>
+    </div>
+  </section>
+
+
+  <!-- ═══════════════════════════════════════════════════════
+       CTA
+  ════════════════════════════════════════════════════════ -->
+  <section class="cta-section">
+    <div class="page-container">
+      <div class="section__label" style="text-align: center;">Get started</div>
+      <h2 class="section__title" style="
+        text-align: center;
+        font-size: var(--text-3xl);
+        max-width: 560px;
+        margin-inline: auto;
+      ">
+        Start measuring something.
+      </h2>
+      <p style="
+        text-align: center;
+        font-size: var(--text-md);
+        color: var(--color-text-2);
+        margin-top: 12px;
+      ">
+        No login. No payment. Just plug in your Arduino and open the scope.
+      </p>
+      <div class="cta-section__actions">
+        <a href="scope.html"            class="btn btn--green  btn--lg">Open Oscilloscope →</a>
+        <a href="signal-generator.html" class="btn btn--ghost  btn--lg">Signal Generator</a>
+      </div>
+    </div>
+  </section>
+
+
+  <!-- ═══════════════════════════════════════════════════════
+       FOOTER
+  ════════════════════════════════════════════════════════ -->
+  <footer class="footer">
+    <a href="index.html" class="footer__logo">EElab77</a>
+
+    <nav class="footer__links">
+      <a href="scope.html"            class="footer__link">Oscilloscope</a>
+      <a href="signal-generator.html" class="footer__link">Signal Generator</a>
+      <a href="#roadmap"              class="footer__link">Roadmap</a>
+    </nav>
+
+    <div class="footer__copy">
+      &copy; 2025 EElab77. All rights reserved.
+    </div>
+  </footer>
+
+
+  <!-- ═══════════════════════════════════════════════════════
+       JS — load order: animations first, nav last
+  ════════════════════════════════════════════════════════ -->
+  <script src="assets/js/home-animations.js"></script>
+  <script src="assets/js/nav.js"></script>
+
+</body>
+</html>
+

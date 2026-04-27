@@ -1,0 +1,25 @@
+/*
+ * scope.css — EElab77
+ * Styles specific to scope.html only.
+ * Everything shared lives in instrument.css.
+ */
+
+#scope-canvas {
+  display: block;
+  width: 100%;
+  height: 100%;
+  cursor: crosshair;
+}
+
+#fft-canvas {
+  display: none;
+  position: absolute;
+  left: 0;
+  bottom: 0;
+  width: 100%;
+  pointer-events: none;
+}
+
+/* When FFT is active the scope canvas shrinks to 60% */
+.inst-main.fft-active #scope-canvas { height: 60%; }
+.inst-main.fft-active #fft-canvas   { display: block; height: 40%; }

@@ -1,0 +1,798 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ESP32 Oscilloscope — EElab77</title>
+  <meta name="description" content="EElab77 ESP32 oscilloscope. 12-bit ADC, up to 200 kSPS, USB or WiFi connection. Works in any browser over WiFi.">
+
+  <!-- Favicon -->
+  <link rel="icon" type="image/svg+xml" href="assets/img/favicon.svg">
+
+  <!-- CSS — tokens first, then base, then components,
+       then shared instrument layout, then page-specific -->
+  <link rel="stylesheet" href="assets/css/tokens.css">
+  <link rel="stylesheet" href="assets/css/base.css">
+  <link rel="stylesheet" href="assets/css/components.css">
+  <link rel="stylesheet" href="assets/css/instrument.css">
+  <link rel="stylesheet" href="assets/css/esp32-scope.css">
+</head>
+<body class="is-instrument">
+
+<div class="instrument-layout">
+
+  <!-- ═══════════════════════════════════════════════════════
+       INSTRUMENT NAV
+  ════════════════════════════════════════════════════════ -->
+  <header class="inst-nav">
+    <a href="esp32-scope.html" class="inst-nav__logo">EElab77</a>
+    <span class="inst-nav__sep">/</span>
+    <span class="inst-nav__page">ESP32 Scope</span>
+
+    <!-- Status badges -->
+    <div class="inst-nav__badges">
+      <div class="badge"              id="esp32-conn-badge">DISCONNECTED</div>
+      <div class="badge"              id="esp32-state-badge">IDLE</div>
+      <div class="badge badge--green"                       id="esp32-ch1-badge">CH1</div>
+      <div class="badge badge--amber" style="opacity:0.35;" id="esp32-ch2-badge">CH2</div>
+      <div class="badge"                                    id="esp32-acq-badge">NORMAL</div>
+    </div>
+
+    <a href="index.html" class="inst-nav__home">&larr; Site</a>
+  </header>
+
+
+  <!-- ═══════════════════════════════════════════════════════
+       MAIN CANVAS AREA
+  ════════════════════════════════════════════════════════ -->
+  <main class="inst-main" id="inst-main">
+
+    <!-- Scope canvas -->
+    <canvas id="esp-scope-canvas"></canvas>
+
+    <!-- FFT canvas — displayed below scope when FFT is active -->
+    <canvas id="esp-fft-canvas"></canvas>
+
+    <!-- ── Measurements overlay (top-left) ── -->
+    <div class="canvas-measurements">
+
+      <!-- CH1 row 1 -->
+      <div class="meas-row">
+        <span class="meas-label" style="color:var(--color-green);">&#9473;</span>
+        <span class="meas-label">F</span>
+        <span class="meas-val meas-val--ch1" id="esp32-m1-freq">&#8212;</span>
+        <span class="meas-label">Period</span>
+        <span class="meas-val meas-val--ch1" id="esp32-m1-period">&#8212;</span>
+      </div>
+
+      <!-- CH1 row 2 -->
+      <div class="meas-row">
+        <span class="meas-label" style="color:var(--color-green);">&#9473;</span>
+        <span class="meas-label">Vpp</span>
+        <span class="meas-val meas-val--ch1" id="esp32-m1-vpp">&#8212;</span>
+        <span class="meas-label">Vmax</span>
+        <span class="meas-val meas-val--ch1" id="esp32-m1-vmax">&#8212;</span>
+        <span class="meas-label">Vmin</span>
+        <span class="meas-val meas-val--ch1" id="esp32-m1-vmin">&#8212;</span>
+      </div>
+
+      <!-- CH1 row 3 -->
+      <div class="meas-row">
+        <span class="meas-label" style="color:var(--color-green);">&#9473;</span>
+        <span class="meas-label">DC</span>
+        <span class="meas-val meas-val--ch1" id="esp32-m1-dc">&#8212;</span>
+        <span class="meas-label">Vrms</span>
+        <span class="meas-val meas-val--ch1" id="esp32-m1-vrms">&#8212;</span>
+        <span class="meas-label">Duty</span>
+        <span class="meas-val meas-val--ch1" id="esp32-m1-duty">&#8212;</span>
+      </div>
+
+      <!-- CH2 rows — hidden until CH2 is enabled -->
+      <div class="meas-row" id="esp32-ch2-meas-row" style="display:none;">
+        <span class="meas-label" style="color:var(--color-amber);">&#9473;</span>
+        <span class="meas-label">F</span>
+        <span class="meas-val meas-val--ch2" id="esp32-m2-freq">&#8212;</span>
+        <span class="meas-label">Vpp</span>
+        <span class="meas-val meas-val--ch2" id="esp32-m2-vpp">&#8212;</span>
+        <span class="meas-label">DC</span>
+        <span class="meas-val meas-val--ch2" id="esp32-m2-dc">&#8212;</span>
+      </div>
+
+    </div>
+
+    <!-- ── Cursor panel (top-right) ── -->
+    <div class="cursor-panel" id="esp32-cursor-panel">
+      <div class="cursor-panel__row">
+        <span class="cursor-panel__label">T1</span>
+        <span class="cursor-panel__val--t" id="esp32-cp-t1">&#8212;</span>
+      </div>
+      <div class="cursor-panel__row">
+        <span class="cursor-panel__label">T2</span>
+        <span class="cursor-panel__val--t" id="esp32-cp-t2">&#8212;</span>
+      </div>
+      <div class="cursor-panel__row">
+        <span class="cursor-panel__label">&Delta;T</span>
+        <span class="cursor-panel__val--t" id="esp32-cp-dt">&#8212;</span>
+      </div>
+      <div class="cursor-panel__row">
+        <span class="cursor-panel__label">1/&Delta;T</span>
+        <span class="cursor-panel__val--t" id="esp32-cp-f">&#8212;</span>
+      </div>
+      <div class="cursor-panel__divider"></div>
+      <div class="cursor-panel__row">
+        <span class="cursor-panel__label">V1</span>
+        <span class="cursor-panel__val--v" id="esp32-cp-v1">&#8212;</span>
+      </div>
+      <div class="cursor-panel__row">
+        <span class="cursor-panel__label">V2</span>
+        <span class="cursor-panel__val--v" id="esp32-cp-v2">&#8212;</span>
+      </div>
+      <div class="cursor-panel__row">
+        <span class="cursor-panel__label">&Delta;V</span>
+        <span class="cursor-panel__val--v" id="esp32-cp-dv">&#8212;</span>
+      </div>
+    </div>
+
+    <!-- ── Trigger state (bottom-left) ── -->
+    <div class="canvas-trig-state" id="esp32-trig-state"></div>
+
+    <!-- ── Timebase label (bottom-right) ── -->
+    <div class="canvas-timebase" id="esp32-timebase-label">&#8212;</div>
+
+    <!-- ── IP address display (top, WiFi mode) ── -->
+    <div class="ip-display" id="esp32-ip-display"
+         style="position:absolute; top:var(--space-3); left:50%;
+                transform:translateX(-50%); z-index:var(--z-raised);">
+      <span class="ip-display__label">IP</span>
+      <span class="ip-display__addr" id="esp32-ip-addr">&#8212;</span>
+      <span class="ip-display__copy" id="esp32-ip-copy">click to copy</span>
+    </div>
+
+    <!-- ── Connect overlay ── -->
+    <div class="connect-overlay" id="esp32-connect-overlay">
+      <div class="connect-overlay__icon">&#9889;</div>
+      <div class="connect-overlay__title">EELAB77 ESP32</div>
+
+      <!-- Connection mode tabs -->
+      <div class="connect-overlay__mode-tabs">
+        <button class="connect-overlay__mode-tab is-active--usb"
+                id="overlay-tab-usb">
+          &#128268; USB
+        </button>
+        <button class="connect-overlay__mode-tab"
+                id="overlay-tab-wifi">
+          &#128245; WiFi
+        </button>
+      </div>
+
+      <!-- USB panel -->
+      <div class="overlay-usb-panel is-visible" id="overlay-usb-panel">
+        <p class="connect-overlay__sub">
+          Flash the sketch, plug in via USB,<br>
+          select your board and baud rate, then connect.
+        </p>
+        <div class="connect-overlay__baud">
+          <span class="connect-overlay__baud-label">Baud:</span>
+          <select class="select" id="esp32-overlay-baud"
+                  style="width:130px;">
+            <option value="115200">115200</option>
+            <option value="500000" selected>500000</option>
+            <option value="1000000">1000000</option>
+            <option value="0">S3 native USB</option>
+          </select>
+        </div>
+        <div class="connect-overlay__warn" id="esp32-no-serial-warn">
+          &#9888; Web Serial requires Chrome or Edge.
+          Switch to WiFi mode for any browser.
+        </div>
+      </div>
+
+      <!-- WiFi panel -->
+      <div class="overlay-wifi-panel" id="overlay-wifi-panel">
+        <p class="connect-overlay__sub">
+          Connect your device to the ESP32 hotspot<br>
+          or enter the IP if on the same network.
+        </p>
+
+        <!-- AP / STA sub-mode -->
+        <div class="wifi-submode" style="width:240px;">
+          <button class="wifi-submode-btn is-active"
+                  id="wifi-sub-ap">AP Mode</button>
+          <button class="wifi-submode-btn"
+                  id="wifi-sub-sta">Station IP</button>
+        </div>
+
+        <!-- AP info -->
+        <div class="wifi-ap-info" id="wifi-ap-info" style="width:240px;">
+          <div class="wifi-ap-info__label">Connect your device to:</div>
+          <div class="wifi-ap-info__value">EElab77-Scope</div>
+          <div style="margin-top:4px;">
+            <span style="color:var(--color-text-3);font-size:10px;">
+              Password:
+            </span>
+            <span class="wifi-ap-info__value">eelab77pw</span>
+          </div>
+          <div style="margin-top:4px;">
+            <span style="color:var(--color-text-3);font-size:10px;">
+              Then connect to:
+            </span>
+            <span class="wifi-ap-info__value">192.168.4.1:81</span>
+          </div>
+        </div>
+
+        <!-- Station fields -->
+        <div class="wifi-sta-fields" id="wifi-sta-fields"
+             style="display:none; width:240px;">
+          <input type="text"
+                 class="wifi-input"
+                 id="wifi-sta-host"
+                 placeholder="ESP32 IP address e.g. 192.168.1.45">
+          <div class="wifi-host-row">
+            <span style="font-family:var(--font-mono);
+                         font-size:var(--text-xs);
+                         color:var(--color-text-3);">
+              Port:
+            </span>
+            <input type="number"
+                   class="wifi-input wifi-port-input"
+                   id="wifi-sta-port"
+                   value="81"
+                   min="1"
+                   max="65535">
+          </div>
+        </div>
+
+        <div class="connect-overlay__wifi-addr is-visible">
+          ws://192.168.4.1:81
+        </div>
+      </div>
+
+      <!-- Connect button -->
+      <button class="btn btn--green btn--lg"
+              id="esp32-btn-connect-overlay">
+        Connect
+      </button>
+
+      <div class="connect-overlay__note">
+        Need the sketch? Click Sketch in the sidebar &rarr;
+      </div>
+    </div>
+
+  </main>
+
+
+  <!-- ═══════════════════════════════════════════════════════
+       STATUS BAR
+  ════════════════════════════════════════════════════════ -->
+  <div class="inst-statusbar">
+
+    <div class="inst-statusbar__stats">
+      <div class="stat-cell">
+        <div class="stat-cell__name">Bytes/s</div>
+        <div class="stat-cell__value" id="esp32-st-bps">&#8212;</div>
+      </div>
+      <div class="stat-cell">
+        <div class="stat-cell__name">Frames/s</div>
+        <div class="stat-cell__value" id="esp32-st-fps">&#8212;</div>
+      </div>
+      <div class="stat-cell">
+        <div class="stat-cell__name">Sync Err</div>
+        <div class="stat-cell__value" id="esp32-st-err">&#8212;</div>
+      </div>
+      <div class="stat-cell">
+        <div class="stat-cell__name">Est SR</div>
+        <div class="stat-cell__value" id="esp32-st-sr">&#8212;</div>
+      </div>
+      <div class="stat-cell">
+        <div class="stat-cell__name">CH2 Frames</div>
+        <div class="stat-cell__value" id="esp32-st-ch2">&#8212;</div>
+      </div>
+      <div class="stat-cell">
+        <div class="stat-cell__name">Health</div>
+        <div class="stat-cell__value" id="esp32-st-health">&#8212;</div>
+      </div>
+    </div>
+
+    <div class="inst-statusbar__log-label">Log</div>
+    <div class="log" id="esp32-log"></div>
+
+  </div>
+
+
+  <!-- ═══════════════════════════════════════════════════════
+       CONTROLS SIDEBAR
+  ════════════════════════════════════════════════════════ -->
+  <aside class="inst-sidebar">
+
+    <!-- ── Connection ── -->
+    <div class="ctrl-section">
+      <div class="ctrl-section__title">Connection</div>
+
+      <!-- Transport mode switcher -->
+      <div class="conn-mode-switcher">
+        <button class="conn-mode-btn is-active--usb"
+                id="esp32-conn-usb">
+          <span class="conn-mode-btn__icon">&#128268;</span>
+          <span class="conn-mode-btn__label">USB</span>
+        </button>
+        <button class="conn-mode-btn"
+                id="esp32-conn-wifi">
+          <span class="conn-mode-btn__icon">&#128245;</span>
+          <span class="conn-mode-btn__label">WiFi</span>
+        </button>
+      </div>
+
+      <!-- Board selector -->
+      <div class="ctrl-section__title"
+           style="margin-bottom:var(--space-2);">Board</div>
+      <div class="board-selector">
+        <button class="board-btn is-active" id="board-btn-s3">
+          ESP32-S3<br>
+          <span style="font-size:9px;opacity:0.6;">Native USB</span>
+        </button>
+        <button class="board-btn" id="board-btn-classic">
+          ESP32 Classic<br>
+          <span style="font-size:9px;opacity:0.6;">USB Bridge</span>
+        </button>
+      </div>
+
+      <!-- Baud rate — only relevant for ESP32 Classic -->
+      <div class="ctrl-row">
+        <div class="form-label">Baud rate
+          <span class="form-label-value">Classic only</span>
+        </div>
+        <select class="select" id="esp32-baud-select">
+          <option value="115200">115200</option>
+          <option value="500000" selected>500000</option>
+          <option value="1000000">1000000</option>
+          <option value="0">S3 native USB</option>
+        </select>
+      </div>
+
+      <!-- WiFi configuration panel — shown when WiFi mode selected -->
+      <div class="wifi-panel" id="esp32-wifi-panel">
+        <div class="wifi-panel__title">WiFi settings</div>
+
+        <div class="wifi-submode">
+          <button class="wifi-submode-btn is-active"
+                  id="wifi-sub-ap">AP</button>
+          <button class="wifi-submode-btn"
+                  id="wifi-sub-sta">Station IP</button>
+        </div>
+
+        <div class="wifi-ap-info" id="wifi-ap-info-sidebar">
+          <div class="wifi-ap-info__label">SSID</div>
+          <div class="wifi-ap-info__value">EElab77-Scope</div>
+          <div style="margin-top:3px;">
+            <span style="color:var(--color-text-3);font-size:10px;">
+              Password:
+            </span>
+            <span class="wifi-ap-info__value">eelab77pw</span>
+          </div>
+          <div style="margin-top:3px;">
+            <span style="color:var(--color-text-3);font-size:10px;">
+              WebSocket:
+            </span>
+            <span class="wifi-ap-info__value">192.168.4.1:81</span>
+          </div>
+        </div>
+
+        <div class="wifi-sta-fields" id="wifi-sta-fields-sidebar"
+             style="display:none;">
+          <input type="text"
+                 class="wifi-input"
+                 id="wifi-sta-host"
+                 placeholder="ESP32 IP address">
+          <div class="wifi-host-row">
+            <input type="number"
+                   class="wifi-input"
+                   id="wifi-sta-port"
+                   value="81"
+                   min="1" max="65535">
+            <span style="font-family:var(--font-mono);
+                         font-size:var(--text-xs);
+                         color:var(--color-text-3);
+                         white-space:nowrap;">:port</span>
+          </div>
+        </div>
+
+        <!-- WiFi status dot -->
+        <div class="wifi-status">
+          <div class="wifi-status__dot" id="esp32-wifi-dot"></div>
+          <span class="wifi-status__text"
+                id="esp32-wifi-text">Not connected</span>
+        </div>
+
+        <!-- IP display (when connected) -->
+        <div class="ip-display" id="esp32-ip-display-sidebar"
+             style="margin-bottom:0;">
+          <span class="ip-display__label">IP</span>
+          <span class="ip-display__addr" id="esp32-ip-addr-sidebar">
+            &#8212;
+          </span>
+        </div>
+
+        <!-- Latency indicator -->
+        <div id="esp32-latency-wrap"
+             style="display:none; align-items:center; gap:var(--space-2);">
+          <div class="latency-indicator" id="esp32-latency">
+            <div class="latency-indicator__bars">
+              <div class="latency-bar"></div>
+              <div class="latency-bar"></div>
+              <div class="latency-bar"></div>
+              <div class="latency-bar"></div>
+            </div>
+            <span class="latency-indicator__value"
+                  id="esp32-latency-val">&#8212;</span>
+          </div>
+        </div>
+
+      </div><!-- /.wifi-panel -->
+
+      <div class="ctrl-btn-row">
+        <button class="btn btn--toggle" id="esp32-btn-connect">
+          Connect
+        </button>
+        <button class="btn btn--toggle" id="esp32-btn-disconnect">
+          Disconnect
+        </button>
+      </div>
+      <div class="ctrl-btn-row">
+        <button class="btn btn--toggle" id="esp32-btn-sketch">Sketch</button>
+        <button class="btn btn--toggle" id="esp32-btn-diag">Diagnose</button>
+      </div>
+    </div>
+
+
+    <!-- ── Channels ── -->
+    <div class="ctrl-section">
+      <div class="ctrl-section__title">Channels</div>
+
+      <div class="ch-tabs">
+        <button class="ch-tab is-active--ch1" id="esp32-tab-ch1">CH1</button>
+        <button class="ch-tab"                id="esp32-tab-ch2">CH2</button>
+      </div>
+
+      <!-- CH1 panel -->
+      <div id="esp32-ch1-panel">
+        <div class="ctrl-btn-row">
+          <button class="btn btn--toggle is-active"
+                  id="esp32-btn-ch1-en"
+                  style="pointer-events:none;opacity:0.5;">Enabled</button>
+          <button class="btn btn--toggle" id="esp32-btn-ch1-ac">AC</button>
+          <button class="btn btn--toggle" id="esp32-btn-ch1-inv">Invert</button>
+        </div>
+        <div class="ctrl-row">
+          <div class="form-label">V/div
+            <span class="form-label-value" id="esp32-lbl-ch1-vdiv">1.0V</span>
+          </div>
+          <input type="range" class="range"
+                 id="esp32-sl-ch1-vdiv"
+                 min="0" max="6" step="1" value="4">
+        </div>
+        <div class="ctrl-row">
+          <div class="form-label">Offset
+            <span class="form-label-value" id="esp32-lbl-ch1-off">0%</span>
+          </div>
+          <input type="range" class="range"
+                 id="esp32-sl-ch1-off"
+                 min="-50" max="50" step="1" value="0">
+        </div>
+        <div style="font-family:var(--font-mono);font-size:10px;
+                    color:var(--color-text-3);margin-top:var(--space-2);">
+          GPIO34 &mdash; 0&ndash;3.3V max<br>
+          <span style="color:var(--color-amber);">
+            Never exceed 3.3V
+          </span>
+        </div>
+      </div>
+
+      <!-- CH2 panel -->
+      <div id="esp32-ch2-panel" style="display:none;">
+        <div class="ctrl-btn-row">
+          <button class="btn btn--toggle"
+                  id="esp32-btn-ch2-en">Enable CH2</button>
+          <button class="btn btn--toggle" id="esp32-btn-ch2-ac">AC</button>
+          <button class="btn btn--toggle" id="esp32-btn-ch2-inv">Invert</button>
+        </div>
+        <div class="ctrl-row">
+          <div class="form-label">V/div
+            <span class="form-label-value" id="esp32-lbl-ch2-vdiv">1.0V</span>
+          </div>
+          <input type="range" class="range range--amber"
+                 id="esp32-sl-ch2-vdiv"
+                 min="0" max="6" step="1" value="4">
+        </div>
+        <div class="ctrl-row">
+          <div class="form-label">Offset
+            <span class="form-label-value" id="esp32-lbl-ch2-off">0%</span>
+          </div>
+          <input type="range" class="range range--amber"
+                 id="esp32-sl-ch2-off"
+                 min="-50" max="50" step="1" value="0">
+        </div>
+        <div style="font-family:var(--font-mono);font-size:10px;
+                    color:var(--color-text-3);margin-top:var(--space-2);">
+          GPIO35 &mdash; 0&ndash;3.3V max<br>
+          <span style="color:var(--color-amber);">
+            Never exceed 3.3V
+          </span>
+        </div>
+      </div>
+    </div>
+
+
+    <!-- ── Acquisition ── -->
+    <div class="ctrl-section">
+      <div class="ctrl-section__title">Acquisition</div>
+
+      <div class="ctrl-btn-row">
+        <button class="btn btn--toggle is-active" id="esp32-btn-run">Run</button>
+        <button class="btn btn--toggle"           id="esp32-btn-pause">Pause</button>
+        <button class="btn btn--toggle"           id="esp32-btn-single">Single</button>
+      </div>
+
+      <div class="ctrl-btn-row">
+        <button class="btn btn--toggle is-active" id="esp32-btn-acq-normal">Normal</button>
+        <button class="btn btn--toggle"           id="esp32-btn-acq-avg">Avg</button>
+        <button class="btn btn--toggle"           id="esp32-btn-acq-peak">Peak</button>
+      </div>
+
+      <div class="ctrl-row" id="esp32-row-avg">
+        <div class="form-label">Avg count
+          <span class="form-label-value" id="esp32-lbl-avg">8</span>
+        </div>
+        <input type="range" class="range"
+               id="esp32-sl-avg"
+               min="0" max="5" step="1" value="2">
+      </div>
+
+      <div class="ctrl-btn-row">
+        <button class="btn btn--toggle" id="esp32-btn-rolling">Rolling</button>
+      </div>
+    </div>
+
+
+    <!-- ── Timebase ── -->
+    <div class="ctrl-section">
+      <div class="ctrl-section__title">Timebase</div>
+      <div class="ctrl-row">
+        <div class="form-label">Time/div
+          <span class="form-label-value" id="esp32-lbl-tb">1ms</span>
+        </div>
+        <input type="range" class="range"
+               id="esp32-sl-tb"
+               min="0" max="10" step="1" value="3">
+      </div>
+    </div>
+
+
+    <!-- ── Trigger ── -->
+    <div class="ctrl-section">
+      <div class="ctrl-section__title">Trigger</div>
+
+      <div class="ctrl-btn-row">
+        <button class="btn btn--toggle is-active" id="esp32-btn-trig-auto">Auto</button>
+        <button class="btn btn--toggle"           id="esp32-btn-trig-norm">Normal</button>
+        <button class="btn btn--toggle"           id="esp32-btn-trig-none">None</button>
+      </div>
+
+      <div class="ctrl-row">
+        <div class="form-label">Source
+          <span class="form-label-value" id="esp32-lbl-trig-src">CH1</span>
+        </div>
+        <input type="range" class="range"
+               id="esp32-sl-trig-src"
+               min="1" max="2" step="1" value="1">
+      </div>
+
+      <div class="ctrl-row">
+        <div class="form-label">Level
+          <span class="form-label-value" id="esp32-lbl-trig-lv">1.65V</span>
+        </div>
+        <input type="range" class="range"
+               id="esp32-sl-trig-lv"
+               min="0" max="100" step="1" value="50">
+        <div class="trig-bar"></div>
+      </div>
+
+      <div class="ctrl-btn-row">
+        <button class="btn btn--toggle is-active" id="esp32-btn-trig-rise">&#8593; Rise</button>
+        <button class="btn btn--toggle"           id="esp32-btn-trig-fall">&#8595; Fall</button>
+      </div>
+
+      <div class="ctrl-row">
+        <div class="form-label">Holdoff
+          <span class="form-label-value" id="esp32-lbl-holdoff">20ms</span>
+        </div>
+        <input type="range" class="range"
+               id="esp32-sl-holdoff"
+               min="0" max="8" step="1" value="3">
+      </div>
+    </div>
+
+
+    <!-- ── Cursors ── -->
+    <div class="ctrl-section">
+      <div class="ctrl-section__title">Cursors</div>
+      <div class="ctrl-btn-row">
+        <button class="btn btn--toggle" id="esp32-btn-cursors">Enable</button>
+        <button class="btn btn--toggle" id="esp32-btn-cur-reset">Reset</button>
+      </div>
+      <div style="font-family:var(--font-mono);font-size:var(--text-xs);
+                  color:var(--color-text-3);margin-top:var(--space-2);
+                  line-height:var(--leading-relaxed);">
+        Drag <span style="color:var(--color-amber);">T1/T2</span> time lines<br>
+        Drag <span style="color:var(--color-cyan);">V1/V2</span> volt lines
+      </div>
+    </div>
+
+
+    <!-- ── Display ── -->
+    <div class="ctrl-section">
+      <div class="ctrl-section__title">Display</div>
+      <div class="ctrl-btn-row">
+        <button class="btn btn--toggle"           id="esp32-btn-fft">FFT</button>
+        <button class="btn btn--toggle is-active" id="esp32-btn-interp">Interp</button>
+        <button class="btn btn--toggle"           id="esp32-btn-fill">Fill</button>
+      </div>
+      <div class="ctrl-row">
+        <div class="form-label">Persistence
+          <span class="form-label-value" id="esp32-lbl-persist">0%</span>
+        </div>
+        <input type="range" class="range"
+               id="esp32-sl-persist"
+               min="0" max="95" step="5" value="0">
+      </div>
+    </div>
+
+
+    <!-- ── Export ── -->
+    <div class="ctrl-section">
+      <div class="ctrl-section__title">Export</div>
+      <div class="ctrl-btn-row">
+        <button class="btn btn--toggle" id="esp32-btn-png">PNG</button>
+        <button class="btn btn--toggle" id="esp32-btn-csv">CSV</button>
+      </div>
+    </div>
+
+
+  </aside>
+</div><!-- /.instrument-layout -->
+
+
+<!-- ═══════════════════════════════════════════════════════
+     SKETCH MODAL
+════════════════════════════════════════════════════════ -->
+<div class="modal-backdrop" id="esp32-sketch-modal-backdrop">
+  <div class="modal">
+
+    <div class="modal__header">
+      <div class="modal__title">
+        Arduino Sketch &mdash; ESP32 Scope (S3 + Classic)
+      </div>
+      <button class="modal__close" id="esp32-modal-close">&#10005;</button>
+    </div>
+
+    <div class="modal__body">
+      <div style="font-family:var(--font-mono);font-size:var(--text-xs);
+                  color:var(--color-amber);margin-bottom:var(--space-4);
+                  line-height:var(--leading-relaxed);">
+        &#9888; Edit the sketch before uploading:<br>
+        1. Uncomment your board (#define BOARD_ESP32_S3 or CLASSIC)<br>
+        2. Set WiFi credentials if using Station mode<br>
+        3. Install required libraries (see sketch header)
+      </div>
+      <pre id="esp32-sketch-text"
+           style="font-size:11px; line-height:var(--leading-loose);"></pre>
+    </div>
+
+    <div class="modal__footer">
+      <button class="btn btn--ghost btn--sm"
+              id="esp32-btn-copy-sketch">Copy</button>
+      <button class="btn btn--green btn--sm"
+              id="esp32-btn-dl-sketch">Download .ino</button>
+    </div>
+
+  </div>
+</div>
+
+
+<!-- ═══════════════════════════════════════════════════════
+     DIAGNOSTICS MODAL
+════════════════════════════════════════════════════════ -->
+<div class="modal-backdrop" id="esp32-diag-modal-backdrop">
+  <div class="modal modal--sm">
+
+    <div class="modal__header">
+      <div class="modal__title">Diagnostics</div>
+      <button class="modal__close" id="esp32-diag-close">&#10005;</button>
+    </div>
+
+    <div class="modal__body">
+
+      <div class="diag-section-title">System Checks</div>
+      <div id="esp32-diag-checks"></div>
+
+      <div class="diag-section-title">Self-Test</div>
+      <p class="diag-trouble" style="margin-bottom:var(--space-3);">
+        Sends <strong>T</strong> to the ESP32. The sketch responds with
+        board info, ADC readings, and WiFi status.
+      </p>
+      <div class="serial-test-out is-empty"
+           id="esp32-serial-test-out">
+        Output will appear here after running the test...
+      </div>
+      <div class="ctrl-btn-row" style="margin-top:var(--space-3);">
+        <button class="btn btn--toggle" id="esp32-btn-test">
+          Run Test
+        </button>
+        <button class="btn btn--toggle" id="esp32-btn-clear-test">
+          Clear
+        </button>
+      </div>
+
+      <div class="diag-section-title">Troubleshooting</div>
+      <div class="diag-trouble">
+        <strong>No data via USB</strong><br>
+        &rarr; ESP32-S3: check BOARD_ESP32_S3 is defined in sketch.<br>
+        &rarr; Classic: baud mismatch &mdash; match selector to sketch.<br>
+        &rarr; Close Arduino Serial Monitor before connecting.<br>
+        <br>
+        <strong>Cannot connect via WiFi</strong><br>
+        &rarr; AP mode: connect your device to EElab77-Scope first.<br>
+        &rarr; Station mode: confirm the IP address is correct.<br>
+        &rarr; Check ESP32 LED is blinking &mdash; fast = streaming,
+               slow = idle.<br>
+        <br>
+        <strong>High latency on WiFi</strong><br>
+        &rarr; Move device closer to the ESP32.<br>
+        &rarr; AP mode is more stable than STA mode for scoping.<br>
+        &rarr; Switch to USB if latency exceeds 80ms.<br>
+        <br>
+        <strong>Waveform noisy or distorted</strong><br>
+        &rarr; ESP32 ADC has nonlinearity &mdash; correction is applied
+               automatically in firmware.<br>
+        &rarr; Add 100nF from GPIO34/35 to GND for RF noise rejection.<br>
+        &rarr; Never exceed 3.3V on any input pin.<br>
+        <br>
+        <strong>CH2 not showing</strong><br>
+        &rarr; Enable CH2 in the Channels panel (sidebar).<br>
+        &rarr; Confirm ch2Enable = true in sketch.<br>
+        <br>
+        <strong>Firefox / Safari not working via USB</strong><br>
+        &rarr; Web Serial is Chrome/Edge only.<br>
+        &rarr; Use WiFi mode for full browser support.
+      </div>
+
+    </div>
+
+    <div class="modal__footer">
+      <button class="btn btn--green btn--sm"
+              id="esp32-btn-run-checks">Run All Checks</button>
+    </div>
+
+  </div>
+</div>
+
+
+<!-- ═══════════════════════════════════════════════════════
+     JS — strict load order
+     1. esp32-scope-sketch.js    data   (EELAB_ESP32_SKETCH)
+     2. esp32-scope-transport.js serial (EEScopeTransport)
+     3. esp32-scope-engine.js    state  (ESP32Engine)
+     4. esp32-scope-fft.js       fft    (ESP32FFT)
+     5. esp32-scope-render.js    draw   (ESP32Render)
+     6. esp32-scope-controls.js  UI     (ESP32Controls)
+     7. nav.js                   active link
+════════════════════════════════════════════════════════ -->
+<script src="assets/js/esp32-scope-sketch.js"></script>
+<script src="assets/js/esp32-scope-transport.js"></script>
+<script src="assets/js/esp32-scope-engine.js"></script>
+<script src="assets/js/esp32-scope-fft.js"></script>
+<script src="assets/js/esp32-scope-render.js"></script>
+<script src="assets/js/esp32-scope-controls.js"></script>
+<script src="assets/js/nav.js"></script>
+
+</body>
+</html>

@@ -27,11 +27,12 @@
     </a>
 
     <ul class="nav__links">
-      <li><a href="index.html"              class="nav__link">Home</a></li>
-      <li><a href="scope.html"              class="nav__link">Oscilloscope</a></li>
-      <li><a href="signal-generator.html"   class="nav__link">Signal Generator</a></li>
-      <li><a href="multimeter.html"         class="nav__link">Multimeter</a></li>
-      <li><a href="#roadmap"                class="nav__link">Roadmap</a></li>
+      <li><a href="index.html"            class="nav__link">Home</a></li>
+      <li><a href="scope.html"            class="nav__link">Oscilloscope</a></li>
+      <li><a href="signal-generator.html" class="nav__link">Signal Generator</a></li>
+      <li><a href="multimeter.html"       class="nav__link">Multimeter</a></li>
+      <li><a href="esp32-scope.html"      class="nav__link">ESP32 Scope</a></li>
+      <li><a href="#roadmap"              class="nav__link">Roadmap</a></li>
     </ul>
 
     <div class="nav__actions">
@@ -354,29 +355,29 @@
         </a>
 
         <!-- ESP32 scope — coming soon -->
-        <div class="card instrument-card" style="opacity: 0.55; cursor: default;">
+        <!-- ESP32 Scope card -->
+        <a href="esp32-scope.html"
+           class="card card--interactive instrument-card">
           <div>
-            <span class="badge">Coming soon</span>
-            <h3 class="instrument-card__title" style="color: var(--color-text-2);">
-              ESP32 Oscilloscope
-            </h3>
+            <span class="badge badge--green">Available</span>
+            <h3 class="instrument-card__title">ESP32 Oscilloscope</h3>
             <p class="instrument-card__body">
-              WebSocket streaming over Wi-Fi — works in any browser, not
-              just Chrome. Up to 200 kHz sample rate. Dual-core
-              architecture keeps sampling and streaming separate.
+              12-bit ADC, up to 200&nbsp;kSPS, dual-channel.
+              Connect via USB in Chrome or stream over WiFi in
+              any browser — Safari, Firefox, Chrome on Android.
+              Supports ESP32-S3 and ESP32 Classic.
             </p>
           </div>
           <div class="instrument-card__footer">
             <div class="instrument-card__tags">
-              <span class="tag">Wi-Fi</span>
-              <span class="tag">200 kHz</span>
+              <span class="tag">12-bit</span>
+              <span class="tag">WiFi</span>
               <span class="tag">Any browser</span>
+              <span class="tag">200kSPS</span>
             </div>
-            <span style="font-size: var(--text-sm); color: var(--color-text-3);">
-              In development
-            </span>
+            <span class="instrument-card__link">Open &rarr;</span>
           </div>
-        </div>
+        </a>
 
         <!-- Logic analyser — planned -->
         <div class="card instrument-card" style="opacity: 0.55; cursor: default;">
@@ -586,10 +587,10 @@
         </div>
 
         <div class="roadmap-item">
-          <div class="roadmap-item__dot roadmap-item__dot--active"></div>
+          <div class="roadmap-item__dot roadmap-item__dot--done"></div>
           <div>
             <div class="roadmap-item__title">ESP32 scope</div>
-            <div class="roadmap-item__body">Wi-Fi streaming, any browser</div>
+            <div class="roadmap-item__body">WiFi streaming, any browser</div>
           </div>
         </div>
 

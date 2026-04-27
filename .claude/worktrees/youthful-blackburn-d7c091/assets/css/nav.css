@@ -1,0 +1,79 @@
+/*
+ * nav.css — EElab77
+ * The site navigation bar. Identical on every page.
+ * Never redefined in a page-specific file.
+ */
+
+.nav {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: var(--z-sticky);
+  height: var(--nav-height);
+  background: rgba(7, 8, 15, 0.85);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border-bottom: 1px solid var(--color-border);
+  display: flex;
+  align-items: center;
+  padding-inline: var(--page-padding-x);
+  gap: var(--space-6);
+}
+
+/* ── Logo ── */
+.nav__logo {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  font-family: var(--font-mono);
+  font-size: var(--text-sm);
+  font-weight: var(--weight-medium);
+  color: var(--color-text);
+  text-decoration: none;
+  flex-shrink: 0;
+  transition: color var(--duration-base) var(--ease-out);
+}
+.nav__logo:hover { color: var(--color-green); }
+
+.nav__logo-mark {
+  font-family: var(--font-mono);
+  font-size: var(--text-base);
+  font-weight: var(--weight-semibold);
+  color: var(--color-green);
+  letter-spacing: var(--tracking-tight);
+}
+
+/* ── Links ── */
+.nav__links {
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
+}
+
+.nav__link {
+  font-size: var(--text-sm);
+  font-weight: var(--weight-medium);
+  color: var(--color-text-3);
+  padding: var(--space-1) var(--space-3);
+  border-radius: var(--radius-md);
+  transition:
+    color var(--duration-base) var(--ease-out),
+    background var(--duration-base) var(--ease-out);
+}
+.nav__link:hover    { color: var(--color-text-2); background: var(--color-bg-hover); }
+.nav__link.is-active { color: var(--color-green); background: var(--color-green-dim); }
+
+/* ── Right-side actions ── */
+.nav__actions {
+  margin-left: auto;
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+}
+
+/* ── Mobile ── */
+@media (max-width: 768px) {
+  .nav__links               { display: none; }
+  .nav__actions .btn--ghost { display: none; }
+}

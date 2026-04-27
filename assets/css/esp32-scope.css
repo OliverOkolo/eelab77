@@ -1,0 +1,525 @@
+/*
+ * esp32-scope.css — EElab77
+ * ─────────────────────────────────────────────────────────────
+ * Styles specific to esp32-scope.html only.
+ * All shared layout lives in instrument.css.
+ * All tokens live in tokens.css.
+ *
+ * Contents:
+ *   1.  Canvas layout (scope + FFT, same as scope.css)
+ *   2.  Connection mode switcher
+ *   3.  WiFi configuration panel
+ *   4.  WiFi status indicator
+ *   5.  Connection mode badges
+ *   6.  IP address display
+ *   7.  Signal quality indicator
+ *   8.  Board selector
+ * ─────────────────────────────────────────────────────────────
+ */
+
+
+/* ─────────────────────────────────────────────────────────────
+   1. CANVAS LAYOUT
+   Identical to scope.css — copied here so esp32-scope.html
+   does not depend on scope.css.
+───────────────────────────────────────────────────────────── */
+
+#esp-scope-canvas {
+  display: block;
+  width: 100%;
+  height: 100%;
+  cursor: crosshair;
+}
+
+#esp-fft-canvas {
+  display: none;
+  position: absolute;
+  left: 0;
+  bottom: 0;
+  width: 100%;
+  pointer-events: none;
+}
+
+.inst-main.fft-active #esp-scope-canvas {
+  height: 60%;
+}
+
+.inst-main.fft-active #esp-fft-canvas {
+  display: block;
+  height: 40%;
+}
+
+
+/* ─────────────────────────────────────────────────────────────
+   2. CONNECTION MODE SWITCHER
+   Sits at the top of the sidebar controls. Lets the user pick
+   between USB (Web Serial) and WiFi (WebSocket).
+───────────────────────────────────────────────────────────── */
+
+.conn-mode-switcher {
+  display: flex;
+  gap: 0;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  overflow: hidden;
+  margin-bottom: var(--space-3);
+}
+
+.conn-mode-btn {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 3px;
+  padding: var(--space-3) var(--space-2);
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  transition:
+    background var(--duration-base) var(--ease-out),
+    color     var(--duration-base) var(--ease-out);
+  border-right: 1px solid var(--color-border);
+}
+
+.conn-mode-btn:last-child {
+  border-right: none;
+}
+
+.conn-mode-btn:hover {
+  background: var(--color-bg-hover);
+}
+
+.conn-mode-btn__icon {
+  font-size: var(--text-lg);
+  line-height: 1;
+}
+
+.conn-mode-btn__label {
+  font-family: var(--font-mono);
+  font-size: var(--text-xs);
+  color: var(--color-text-3);
+  letter-spacing: var(--tracking-wide);
+  text-transform: uppercase;
+  line-height: 1;
+}
+
+/* Active — USB mode */
+.conn-mode-btn.is-active--usb {
+  background: var(--color-green-dim);
+}
+.conn-mode-btn.is-active--usb .conn-mode-btn__label {
+  color: var(--color-green);
+}
+
+/* Active — WiFi mode */
+.conn-mode-btn.is-active--wifi {
+  background: var(--color-blue-dim);
+}
+.conn-mode-btn.is-active--wifi .conn-mode-btn__label {
+  color: var(--color-blue);
+}
+
+
+/* ─────────────────────────────────────────────────────────────
+   3. WIFI CONFIGURATION PANEL
+   Shown when WiFi mode is selected. Hidden in USB mode.
+───────────────────────────────────────────────────────────── */
+
+.wifi-panel {
+  display: none;
+  flex-direction: column;
+  gap: var(--space-3);
+  margin-bottom: var(--space-3);
+  padding: var(--space-3);
+  background: var(--color-bg);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+}
+
+.wifi-panel.is-visible {
+  display: flex;
+}
+
+.wifi-panel__title {
+  font-family: var(--font-mono);
+  font-size: var(--text-xs);
+  color: var(--color-text-3);
+  letter-spacing: var(--tracking-wider);
+  text-transform: uppercase;
+  margin-bottom: var(--space-1);
+}
+
+/* WiFi sub-mode tabs: AP mode vs Station mode */
+.wifi-submode {
+  display: flex;
+  gap: 0;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  overflow: hidden;
+  margin-bottom: var(--space-2);
+}
+
+.wifi-submode-btn {
+  flex: 1;
+  padding: var(--space-1) var(--space-2);
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  font-family: var(--font-mono);
+  font-size: var(--text-xs);
+  color: var(--color-text-3);
+  letter-spacing: var(--tracking-wide);
+  text-transform: uppercase;
+  border-right: 1px solid var(--color-border);
+  transition: all var(--duration-base) var(--ease-out);
+}
+
+.wifi-submode-btn:last-child { border-right: none; }
+.wifi-submode-btn:hover { background: var(--color-bg-hover); color: var(--color-text-2); }
+
+.wifi-submode-btn.is-active {
+  background: var(--color-blue-dim);
+  color: var(--color-blue);
+}
+
+/* AP mode info box */
+.wifi-ap-info {
+  background: var(--color-bg-overlay);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  padding: var(--space-2) var(--space-3);
+  font-family: var(--font-mono);
+  font-size: var(--text-xs);
+  color: var(--color-text-2);
+  line-height: var(--leading-loose);
+}
+
+.wifi-ap-info__label {
+  color: var(--color-text-3);
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: var(--tracking-wider);
+  margin-bottom: 3px;
+}
+
+.wifi-ap-info__value {
+  color: var(--color-blue);
+  font-weight: var(--weight-medium);
+}
+
+/* Station mode — SSID and password inputs */
+.wifi-sta-fields {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.wifi-input {
+  width: 100%;
+  padding: var(--space-2) var(--space-3);
+  background: var(--color-bg);
+  border: 1px solid var(--color-border-2);
+  border-radius: var(--radius-md);
+  color: var(--color-text);
+  font-family: var(--font-mono);
+  font-size: var(--text-xs);
+  outline: none;
+  transition: border-color var(--duration-base) var(--ease-out);
+}
+
+.wifi-input::placeholder { color: var(--color-text-3); }
+.wifi-input:focus        { border-color: var(--color-blue); }
+
+/* Host / port for WebSocket connection */
+.wifi-host-row {
+  display: flex;
+  gap: var(--space-2);
+  align-items: center;
+}
+
+.wifi-host-row .wifi-input { flex: 1; }
+
+.wifi-port-input {
+  width: 72px;
+  flex-shrink: 0;
+}
+
+
+/* ─────────────────────────────────────────────────────────────
+   4. WIFI STATUS INDICATOR
+───────────────────────────────────────────────────────────── */
+
+.wifi-status {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-2) var(--space-3);
+  background: var(--color-bg);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  font-family: var(--font-mono);
+  font-size: var(--text-xs);
+}
+
+.wifi-status__dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  flex-shrink: 0;
+  background: var(--color-text-3);
+  transition: background var(--duration-base) var(--ease-out),
+              box-shadow var(--duration-base) var(--ease-out);
+}
+
+.wifi-status__dot--connected {
+  background: var(--color-blue);
+  box-shadow: 0 0 6px var(--color-blue);
+  animation: badge-pulse 2s ease-in-out infinite;
+}
+
+.wifi-status__dot--ap {
+  background: var(--color-green);
+  box-shadow: 0 0 6px var(--color-green);
+}
+
+.wifi-status__dot--error {
+  background: var(--color-red);
+  box-shadow: 0 0 6px var(--color-red);
+}
+
+.wifi-status__text {
+  color: var(--color-text-2);
+  flex: 1;
+}
+
+.wifi-status__text--connected { color: var(--color-blue); }
+.wifi-status__text--ap        { color: var(--color-green); }
+.wifi-status__text--error     { color: var(--color-red); }
+
+
+/* ─────────────────────────────────────────────────────────────
+   5. CONNECTION MODE BADGES
+   Shown in the instrument nav header.
+───────────────────────────────────────────────────────────── */
+
+.badge--usb {
+  color: var(--color-green);
+  border-color: var(--color-green);
+  background: var(--color-green-dim);
+}
+
+.badge--wifi {
+  color: var(--color-blue);
+  border-color: var(--color-blue);
+  background: var(--color-blue-dim);
+}
+
+.badge--ap {
+  color: var(--color-green);
+  border-color: var(--color-green);
+  background: var(--color-green-dim);
+  animation: badge-pulse 2s ease-in-out infinite;
+}
+
+
+/* ─────────────────────────────────────────────────────────────
+   6. IP ADDRESS DISPLAY
+   Shows the ESP32's IP address when connected over WiFi.
+───────────────────────────────────────────────────────────── */
+
+.ip-display {
+  display: none;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-2) var(--space-3);
+  background: var(--color-blue-dim);
+  border: 1px solid var(--color-blue);
+  border-radius: var(--radius-md);
+  font-family: var(--font-mono);
+  font-size: var(--text-xs);
+  color: var(--color-blue);
+  margin-bottom: var(--space-3);
+  cursor: pointer;
+  transition: background var(--duration-base) var(--ease-out);
+}
+
+.ip-display.is-visible { display: flex; }
+.ip-display:hover { background: rgba(78, 140, 255, 0.2); }
+
+.ip-display__label {
+  color: var(--color-text-3);
+  flex-shrink: 0;
+}
+
+.ip-display__addr {
+  font-weight: var(--weight-medium);
+  flex: 1;
+}
+
+.ip-display__copy {
+  font-size: 10px;
+  color: var(--color-text-3);
+}
+
+
+/* ─────────────────────────────────────────────────────────────
+   7. SIGNAL QUALITY / LATENCY INDICATOR
+   Shows WebSocket round-trip latency when in WiFi mode.
+───────────────────────────────────────────────────────────── */
+
+.latency-indicator {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  font-family: var(--font-mono);
+  font-size: var(--text-xs);
+}
+
+.latency-indicator__bars {
+  display: flex;
+  align-items: flex-end;
+  gap: 2px;
+  height: 12px;
+}
+
+.latency-bar {
+  width: 4px;
+  background: var(--color-border-2);
+  border-radius: 1px;
+  transition: background var(--duration-base) var(--ease-out),
+              height    var(--duration-base) var(--ease-out);
+}
+
+.latency-bar:nth-child(1) { height: 30%; }
+.latency-bar:nth-child(2) { height: 55%; }
+.latency-bar:nth-child(3) { height: 80%; }
+.latency-bar:nth-child(4) { height: 100%; }
+
+/* Good — all bars lit green */
+.latency-indicator.is-good .latency-bar { background: var(--color-green); }
+
+/* Fair — first two bars amber */
+.latency-indicator.is-fair .latency-bar:nth-child(1),
+.latency-indicator.is-fair .latency-bar:nth-child(2) {
+  background: var(--color-amber);
+}
+
+/* Poor — only first bar red */
+.latency-indicator.is-poor .latency-bar:nth-child(1) {
+  background: var(--color-red);
+}
+
+.latency-indicator__value {
+  color: var(--color-text-3);
+}
+
+.latency-indicator__value--good { color: var(--color-green); }
+.latency-indicator__value--fair { color: var(--color-amber); }
+.latency-indicator__value--poor { color: var(--color-red);   }
+
+
+/* ─────────────────────────────────────────────────────────────
+   8. BOARD SELECTOR
+───────────────────────────────────────────────────────────── */
+
+.board-selector {
+  display: flex;
+  gap: 0;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  overflow: hidden;
+  margin-bottom: var(--space-3);
+}
+
+.board-btn {
+  flex: 1;
+  padding: var(--space-2) var(--space-2);
+  background: transparent;
+  border: none;
+  border-right: 1px solid var(--color-border);
+  cursor: pointer;
+  font-family: var(--font-mono);
+  font-size: var(--text-xs);
+  color: var(--color-text-3);
+  letter-spacing: var(--tracking-wide);
+  text-transform: uppercase;
+  line-height: 1.4;
+  text-align: center;
+  transition: all var(--duration-base) var(--ease-out);
+}
+
+.board-btn:last-child  { border-right: none; }
+.board-btn:hover       { background: var(--color-bg-hover); color: var(--color-text-2); }
+
+.board-btn.is-active {
+  background: var(--color-green-dim);
+  color: var(--color-green);
+}
+
+/* Connect overlay WiFi variant */
+.connect-overlay__wifi-addr {
+  font-family: var(--font-mono);
+  font-size: var(--text-base);
+  color: var(--color-blue);
+  font-weight: var(--weight-medium);
+  background: var(--color-blue-dim);
+  border: 1px solid var(--color-blue);
+  padding: var(--space-2) var(--space-6);
+  border-radius: var(--radius-md);
+  letter-spacing: var(--tracking-wide);
+  display: none;
+}
+
+.connect-overlay__wifi-addr.is-visible { display: block; }
+
+.connect-overlay__mode-tabs {
+  display: flex;
+  gap: 0;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  overflow: hidden;
+}
+
+.connect-overlay__mode-tab {
+  flex: 1;
+  padding: var(--space-2) var(--space-4);
+  background: transparent;
+  border: none;
+  border-right: 1px solid var(--color-border);
+  cursor: pointer;
+  font-family: var(--font-mono);
+  font-size: var(--text-xs);
+  color: var(--color-text-3);
+  letter-spacing: var(--tracking-wide);
+  text-transform: uppercase;
+  transition: all var(--duration-base) var(--ease-out);
+}
+
+.connect-overlay__mode-tab:last-child  { border-right: none; }
+.connect-overlay__mode-tab:hover       { background: var(--color-bg-hover); }
+
+.connect-overlay__mode-tab.is-active--usb {
+  background: var(--color-green-dim);
+  color: var(--color-green);
+}
+
+.connect-overlay__mode-tab.is-active--wifi {
+  background: var(--color-blue-dim);
+  color: var(--color-blue);
+}
+
+/* USB panel and WiFi panel inside the overlay */
+.overlay-usb-panel,
+.overlay-wifi-panel {
+  display: none;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-3);
+  width: 100%;
+  max-width: 320px;
+}
+
+.overlay-usb-panel.is-visible,
+.overlay-wifi-panel.is-visible {
+  display: flex;
+}
