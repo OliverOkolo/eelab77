@@ -101,6 +101,18 @@
     }
   }
 
+  /* ── Active range label for a given mode + numeric value ─── */
+  function getRangeLabel(modeCode, numeric) {
+    if (!window.EEDmmEngine) return '';
+    var md = window.EEDmmEngine.getModeData()[modeCode];
+    if (!md || !md.ranges) return '';
+    var abs = Math.abs(numeric);
+    for (var i = 0; i < md.ranges.length; i++) {
+      if (abs <= md.ranges[i].max) return md.ranges[i].label;
+    }
+    return md.ranges[md.ranges.length - 1].label;
+  }
+
   /* ── Update main DMM display ─────────────────────────────── */
   function updateDisplay(state) {
     var readingEl  = $('dmm-reading');
@@ -112,8 +124,13 @@
 
     if (!readingEl) return;
 
-    /* Mode label */
-    if (modeEl) modeEl.textContent = state.displayMode;
+    /* Mode label + range indicator */
+    if (modeEl) {
+      var rangeLabel = getRangeLabel(state.mode, state.numericValue);
+      modeEl.textContent = rangeLabel
+        ? state.displayMode + '  ·  ' + rangeLabel
+        : state.displayMode;
+    }
 
     /* Hold badge */
     if (holdBadge) {
@@ -288,8 +305,17 @@
     };
     var colour = modeColours[state.mode] || '#00C87A';
 
-    /* Draw the trace */
-    var n = chartBuffer.length;
+    /* Time range for x-axis — use actual timestamps, not index */
+    var n      = chartBuffer.length;
+    var tStart = chartBuffer[0].timestamp;
+    var tEnd   = chartBuffer[n - 1].timestamp;
+    var tSpan  = Math.max(1, tEnd - tStart); /* ms */
+
+    function xForPoint(idx) {
+      var pt = chartBuffer[idx];
+      if (pt.value === null) return null;
+      return ((pt.timestamp - tStart) / tSpan) * W;
+    }
 
     /* Glow pass */
     chartCtx.beginPath();
@@ -300,11 +326,8 @@
 
     var firstDrawn = false;
     for (var ci = 0; ci < n; ci++) {
-      if (chartBuffer[ci].value === null) {
-        firstDrawn = false;
-        continue;
-      }
-      var cx = (ci / (n - 1)) * W;
+      if (chartBuffer[ci].value === null) { firstDrawn = false; continue; }
+      var cx = xForPoint(ci);
       var cy = H - ((chartBuffer[ci].value - yMin) / ySpan) * H;
       cy = Math.max(2, Math.min(H - 2, cy));
       if (!firstDrawn) { chartCtx.moveTo(cx, cy); firstDrawn = true; }
@@ -323,11 +346,8 @@
 
     firstDrawn = false;
     for (var li = 0; li < n; li++) {
-      if (chartBuffer[li].value === null) {
-        firstDrawn = false;
-        continue;
-      }
-      var lx = (li / (n - 1)) * W;
+      if (chartBuffer[li].value === null) { firstDrawn = false; continue; }
+      var lx = xForPoint(li);
       var ly = H - ((chartBuffer[li].value - yMin) / ySpan) * H;
       ly = Math.max(2, Math.min(H - 2, ly));
       if (!firstDrawn) { chartCtx.moveTo(lx, ly); firstDrawn = true; }
@@ -354,10 +374,14 @@
     chartCtx.fillText(fmtY((yMin + yMax) / 2), 4, H / 2 + 4);
     chartCtx.fillText(fmtY(yMin), 4, H - 4);
 
-    /* Time span label */
-    var spanSec = (n / 10).toFixed(0);
+    /* Time span label — actual elapsed time from first to last sample */
+    var spanSec = (tSpan / 1000).toFixed(1);
     chartCtx.textAlign = 'right';
     chartCtx.fillText(spanSec + ' s', W - 4, 14);
+
+    /* Update the chart-timespan element if present */
+    var tsEl = document.getElementById('chart-timespan');
+    if (tsEl) tsEl.textContent = spanSec + ' s';
   }
 
   /* ── Main update callback (called by engine) ─────────────── */
@@ -438,18 +462,6 @@
   }
 
   /* ── Diagnostics checks ──────────────────────────────────── */
-  function addCheck(container, icon, cls, text, sub) {
-    var row = document.createElement('div');
-    row.className = 'diag-check';
-    row.innerHTML =
-      '<div class="diag-check__icon diag-check__icon--' + cls + '">' + icon + '</div>' +
-      '<div>' +
-        '<div class="diag-check__text">' + text + '</div>' +
-        (sub ? '<div class="diag-check__sub">' + sub + '</div>' : '') +
-      '</div>';
-    container.appendChild(row);
-  }
-
   function runAllChecks() {
     var c = $('dmm-diag-checks');
     if (!c) return;
@@ -459,7 +471,7 @@
     var diag      = connected ? window.EEDmmSerial.getDiag() : null;
 
     /* Web Serial */
-    addCheck(c,
+    window.EELab.addCheck(c,
       navigator.serial ? '\u2713' : '\u2717',
       navigator.serial ? 'pass'   : 'fail',
       navigator.serial ? 'Web Serial API supported' : 'Web Serial NOT supported',
@@ -468,25 +480,25 @@
 
     /* Connection */
     if (connected) {
-      addCheck(c, '\u2713', 'pass',
+      window.EELab.addCheck(c, '\u2713', 'pass',
         'Port open @ ' + ($('dmm-baud-select') ? $('dmm-baud-select').value : '?') + ' baud');
     } else {
-      addCheck(c, '\u2717', 'fail', 'Not connected', 'Click Connect.');
+      window.EELab.addCheck(c, '\u2717', 'fail', 'Not connected', 'Click Connect.');
     }
 
     if (connected && diag) {
       /* Data flow */
       var since = Date.now() - diag.lastFrameTime;
       if (diag.framesTotal === 0) {
-        addCheck(c, '\u2717', 'fail',
+        window.EELab.addCheck(c, '\u2717', 'fail',
           'No frames received',
           'Check baud rate and sketch. Firmware sends 10 frames/sec.');
       } else if (since > 5000) {
-        addCheck(c, '\u26A0', 'warn',
+        window.EELab.addCheck(c, '\u26A0', 'warn',
           'Frames stopped ' + Math.round(since / 1000) + 's ago',
           'Arduino may have reset. Try disconnecting and reconnecting.');
       } else {
-        addCheck(c, '\u2713', 'pass',
+        window.EELab.addCheck(c, '\u2713', 'pass',
           diag.framesTotal.toLocaleString() + ' frames received',
           'Data is flowing from the Arduino.');
       }
@@ -496,7 +508,7 @@
         ? Math.min(100, Math.round(diag.framesTotal / (diag.bytesTotal / 6) * 100))
         : 0;
 
-      addCheck(c,
+      window.EELab.addCheck(c,
         health >= 80 ? '\u2713' : health >= 40 ? '\u26A0' : '\u2717',
         health >= 80 ? 'pass'   : health >= 40 ? 'warn'   : 'fail',
         'Frame health ' + health + '%',
@@ -506,7 +518,7 @@
       );
 
       /* Sync errors */
-      addCheck(c,
+      window.EELab.addCheck(c,
         diag.syncErrors === 0 ? '\u2713' : diag.syncErrors < 10 ? '\u26A0' : '\u2717',
         diag.syncErrors === 0 ? 'pass'   : diag.syncErrors < 10 ? 'warn'   : 'fail',
         diag.syncErrors + ' sync errors',

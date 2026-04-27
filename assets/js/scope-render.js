@@ -414,6 +414,19 @@
       drawTrace(data.frozen2, W, H, 1, '#F5A623');
     }
 
+    /* ── Reference waveforms (stored memory traces) ── */
+    if (data.refWave1) {
+      drawTrace(data.refWave1, W, H, 0, '#2a6644');
+    }
+    if (data.refWave2 && s.ch[1].enabled) {
+      drawTrace(data.refWave2, W, H, 1, '#7a5010');
+    }
+
+    /* ── Math channel (CH1 - CH2) ── */
+    if (data.mathTrace) {
+      drawTrace(data.mathTrace, W, H, 0, '#9b59f5');
+    }
+
     /* ── Overlays ── */
     drawTrigLine(W, H);
     if (s.cursorsEnabled) drawCursors(W, H);
@@ -434,45 +447,82 @@
 
   /* ── Cursor drag handling ────────────────────────────────── */
   /*
-   * Detects which cursor line (T1, T2, V1, V2) is near the mouse
-   * on mousedown and drags it on mousemove.
-   * Epsilon is expressed as a fraction of canvas CSS width/height.
+   * Detects which cursor line (T1, T2, V1, V2) is near the pointer
+   * on press and drags it on move. Supports both mouse and touch.
+   * Epsilon scales with canvas width so grab target feels consistent
+   * at any screen size: 24 CSS pixels converted to a fraction.
    */
   function setupCursorDrag() {
     var dragging = null;
-    var EPS      = 0.018;
 
+    function epsilonFor(rect) {
+      /* ~24px grab zone regardless of viewport size */
+      return Math.max(0.018, 24 / rect.width);
+    }
+
+    function pickCursor(mx, my, s, eps) {
+      if (Math.abs(mx - s.cursorT1) < eps) return 'T1';
+      if (Math.abs(mx - s.cursorT2) < eps) return 'T2';
+      if (Math.abs(my - s.cursorV1) < eps) return 'V1';
+      if (Math.abs(my - s.cursorV2) < eps) return 'V2';
+      return null;
+    }
+
+    function normPos(clientX, clientY, rect) {
+      return {
+        mx: Math.max(0, Math.min(1, (clientX - rect.left) / rect.width)),
+        my: Math.max(0, Math.min(1, (clientY - rect.top)  / rect.height))
+      };
+    }
+
+    function applyDrag(mx, my, s) {
+      if      (dragging === 'T1') s.cursorT1 = mx;
+      else if (dragging === 'T2') s.cursorT2 = mx;
+      else if (dragging === 'V1') s.cursorV1 = my;
+      else if (dragging === 'V2') s.cursorV2 = my;
+    }
+
+    /* ── Mouse ── */
     canvas.addEventListener('mousedown', function (e) {
       if (!window.EEEngine) return;
-      var s = window.EEEngine.state;
+      var s    = window.EEEngine.state;
       if (!s.cursorsEnabled) return;
-
       var rect = canvas.getBoundingClientRect();
-      var mx   = (e.clientX - rect.left)  / rect.width;
-      var my   = (e.clientY - rect.top)   / rect.height;
-
-      if      (Math.abs(mx - s.cursorT1) < EPS) dragging = 'T1';
-      else if (Math.abs(mx - s.cursorT2) < EPS) dragging = 'T2';
-      else if (Math.abs(my - s.cursorV1) < EPS) dragging = 'V1';
-      else if (Math.abs(my - s.cursorV2) < EPS) dragging = 'V2';
+      var p    = normPos(e.clientX, e.clientY, rect);
+      dragging = pickCursor(p.mx, p.my, s, epsilonFor(rect));
     });
 
     window.addEventListener('mousemove', function (e) {
       if (!dragging || !window.EEEngine) return;
       var rect = canvas.getBoundingClientRect();
-      var mx   = Math.max(0, Math.min(1, (e.clientX - rect.left)  / rect.width));
-      var my   = Math.max(0, Math.min(1, (e.clientY - rect.top)   / rect.height));
+      var p    = normPos(e.clientX, e.clientY, rect);
+      applyDrag(p.mx, p.my, window.EEEngine.state);
+    });
+
+    window.addEventListener('mouseup', function () { dragging = null; });
+
+    /* ── Touch ── */
+    canvas.addEventListener('touchstart', function (e) {
+      if (!window.EEEngine) return;
       var s    = window.EEEngine.state;
+      if (!s.cursorsEnabled) return;
+      var rect = canvas.getBoundingClientRect();
+      var t    = e.changedTouches[0];
+      var p    = normPos(t.clientX, t.clientY, rect);
+      dragging = pickCursor(p.mx, p.my, s, epsilonFor(rect));
+      if (dragging) e.preventDefault();
+    }, { passive: false });
 
-      if      (dragging === 'T1') s.cursorT1 = mx;
-      else if (dragging === 'T2') s.cursorT2 = mx;
-      else if (dragging === 'V1') s.cursorV1 = my;
-      else if (dragging === 'V2') s.cursorV2 = my;
-    });
+    window.addEventListener('touchmove', function (e) {
+      if (!dragging || !window.EEEngine) return;
+      var rect = canvas.getBoundingClientRect();
+      var t    = e.changedTouches[0];
+      var p    = normPos(t.clientX, t.clientY, rect);
+      applyDrag(p.mx, p.my, window.EEEngine.state);
+      e.preventDefault();
+    }, { passive: false });
 
-    window.addEventListener('mouseup', function () {
-      dragging = null;
-    });
+    window.addEventListener('touchend', function () { dragging = null; });
   }
 
   /* ── Init ─────────────────────────────────────────────────── */

@@ -111,6 +111,13 @@
         var ch  = (b >> 2) & 0x01;
         var val = ((b & 0x03) << 8) | parseLo;
 
+        /* 10-bit ADC values must be 0–1023; anything higher is corruption */
+        if (val > 1023) {
+          diag.syncErrors++;
+          parseState = 0;
+          break;
+        }
+
         /* Count frames */
         if (ch === 0) {
           diag.framesTotal++;

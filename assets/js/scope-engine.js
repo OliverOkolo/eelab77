@@ -105,7 +105,11 @@
     interpolate:  true,
     fill:         false,
     fftEnabled:   false,
-    persistence:  0       /* 0 = off, 0.05..0.95 = phosphor decay */
+    persistence:  0,      /* 0 = off, 0.05..0.95 = phosphor decay */
+
+    /* Math channel */
+    mathEnabled:  false,  /* show CH1 - CH2 as a third trace */
+    mathOp:       'diff'  /* 'diff' = CH1 - CH2 */
   };
 
   /* ── Frozen display buffers ──────────────────────────────── */
@@ -117,6 +121,10 @@
   var frozen1    = null;   /* Float32Array — CH1 processed samples */
   var frozen2    = null;   /* Float32Array — CH2 processed samples */
   var frozenRaw1 = null;   /* Uint16Array  — CH1 raw ADC for CSV export */
+
+  /* ── Reference (memory) waveforms ───────────────────────── */
+  var refWave1   = null;   /* Float32Array — stored CH1 reference trace */
+  var refWave2   = null;   /* Float32Array — stored CH2 reference trace */
 
   /* ── Acquisition accumulators ────────────────────────────── */
   var avgBuffer   = null;  /* Float32Array accumulator for average mode */
@@ -231,7 +239,9 @@
 
     for (var j = 0; j < n; j++) {
       var v = raw[j] - dc;
-      if (cfg.invert) v = ADC_MAX - raw[j] - (dc > 0 ? dc : 0);
+      /* Invert: flip DC-coupled signal around ADC midpoint,
+         or flip AC-coupled signal around zero. */
+      if (cfg.invert) v = cfg.acCouple ? -v : ADC_MAX - raw[j];
       out[j] = v;
     }
 
@@ -461,7 +471,8 @@
       if ((samples[k - 1] < mean) !== (samples[k] < mean)) crossings++;
     }
     var windowSec = (TIMEBASE_MS[state.timebaseIdx] / 1000) * GRID_X;
-    var freq      = crossings > 1 ? (crossings / 2) / windowSec : null;
+    /* crossings >= 2 catches single-cycle signals (one rise + one fall) */
+    var freq      = crossings >= 2 ? (crossings / 2) / windowSec : null;
 
     /* Duty cycle — fraction of samples above the mean */
     var highCount = 0;
@@ -497,6 +508,97 @@
     displayDirty = true;
   }
 
+  /* ── Reference waveform ─────────────────────────────────── */
+  /*
+   * captureRef() freezes a copy of the current display buffers
+   * as a stored reference trace drawn in a muted colour.
+   * clearRef() removes it.
+   */
+  function captureRef() {
+    refWave1 = frozen1 ? new Float32Array(frozen1) : null;
+    refWave2 = frozen2 ? new Float32Array(frozen2) : null;
+  }
+
+  function clearRef() {
+    refWave1 = null;
+    refWave2 = null;
+  }
+
+  /* ── Math channel ────────────────────────────────────────── */
+  /*
+   * Returns a Float32Array of (CH1 - CH2) in ADC units,
+   * or null if either channel is missing.
+   */
+  function getMathTrace() {
+    if (!state.mathEnabled || !frozen1 || !frozen2) return null;
+    var n    = Math.min(frozen1.length, frozen2.length);
+    var math = new Float32Array(n);
+    for (var i = 0; i < n; i++) {
+      math[i] = frozen1[i] - frozen2[i];
+    }
+    return math;
+  }
+
+  /* ── Autoscale ───────────────────────────────────────────── */
+  /*
+   * Picks V/div and timebase that best fit the current signal.
+   * Uses the frequency and amplitude from computeMeasurements.
+   * Returns immediately if no signal data is available.
+   */
+  function autoscale() {
+    if (!frozen1 || frozen1.length < 4) return;
+
+    /* ── Vertical: pick V/div to show ~80% of Vpp ── */
+    var n   = frozen1.length;
+    var max = -Infinity;
+    var min =  Infinity;
+    for (var i = 0; i < n; i++) {
+      if (frozen1[i] > max) max = frozen1[i];
+      if (frozen1[i] < min) min = frozen1[i];
+    }
+    var vpp    = (max - min) / ADC_MAX * VREF;
+    var vPerDiv = vpp / (GRID_Y * 0.8);
+
+    var bestVdiv = 0;
+    for (var v = 0; v < VDIV_V.length - 1; v++) {
+      if (VDIV_V[v] >= vPerDiv) { bestVdiv = v; break; }
+      bestVdiv = VDIV_V.length - 1;
+    }
+    state.ch[0].vdivIdx  = bestVdiv;
+    state.ch[0].offsetPct = 0;
+
+    /* ── Horizontal: pick timebase to show ~2 cycles ── */
+    var mean = 0;
+    for (var j = 0; j < n; j++) mean += frozen1[j];
+    mean /= n;
+
+    var crossings = 0;
+    for (var k = 1; k < n; k++) {
+      if ((frozen1[k - 1] < mean) !== (frozen1[k] < mean)) crossings++;
+    }
+
+    var windowSec = (TIMEBASE_MS[state.timebaseIdx] / 1000) * GRID_X;
+    var freq = crossings >= 2 ? (crossings / 2) / windowSec : 0;
+
+    if (freq > 0) {
+      var targetWindow = 2 / freq; /* show 2 cycles */
+      var tbPerDiv     = targetWindow / GRID_X * 1000; /* ms/div */
+      var bestTb       = 0;
+      for (var t = 0; t < TIMEBASE_MS.length - 1; t++) {
+        if (TIMEBASE_MS[t] >= tbPerDiv) { bestTb = t; break; }
+        bestTb = TIMEBASE_MS.length - 1;
+      }
+      state.timebaseIdx = bestTb;
+    }
+
+    resetAcq();
+
+    /* Notify controls so slider labels refresh */
+    if (window.EEControls && window.EEControls.syncAutoscaleUI) {
+      window.EEControls.syncAutoscaleUI();
+    }
+  }
+
   /* ── Getters for render module ───────────────────────────── */
   function getDisplayData() {
     return {
@@ -505,6 +607,9 @@
       frozenRaw1: frozenRaw1,
       peakMax:    peakMax,
       peakMin:    peakMin,
+      refWave1:   refWave1,
+      refWave2:   refWave2,
+      mathTrace:  getMathTrace(),
       state:      state,
       trigState:  trigState
     };
@@ -520,6 +625,10 @@
     updateCapture:  updateCapture,
     resetAcq:       resetAcq,
     getDisplayData: getDisplayData,
+    captureRef:     captureRef,
+    clearRef:       clearRef,
+    getMathTrace:   getMathTrace,
+    autoscale:      autoscale,
 
     /* Constants — needed by controls and render modules */
     VREF:        VREF,

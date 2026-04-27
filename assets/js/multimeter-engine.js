@@ -391,7 +391,13 @@
       state.displayMode = md.label;
     }
 
-    if (frame.overrange) {
+    /* Diode: clamp Vf values that exceed the ADC reference — these
+       are noise / open-circuit artefacts, not real forward voltages. */
+    if (mode === MODE.DIODE && !frame.overrange && numeric > 4.9) {
+      state.overrange = true;
+    }
+
+    if (state.overrange) {
       state.displayValue = 'OL';
       state.displayUnit  = md ? md.baseUnit : '';
     } else {
