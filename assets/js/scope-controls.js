@@ -341,18 +341,6 @@
   }
 
   /* ── Diagnostics: build check list ──────────────────────── */
-  function addCheck(container, icon, cls, text, sub) {
-    var row = document.createElement('div');
-    row.className = 'diag-check';
-    row.innerHTML =
-      '<div class="diag-check__icon diag-check__icon--' + cls + '">' + icon + '</div>' +
-      '<div>' +
-        '<div class="diag-check__text">' + text + '</div>' +
-        (sub ? '<div class="diag-check__sub">' + sub + '</div>' : '') +
-      '</div>';
-    container.appendChild(row);
-  }
-
   function runAllChecks() {
     var c = $('diag-checks');
     if (!c) return;
@@ -363,7 +351,7 @@
     var baud      = $('baud-select') ? $('baud-select').value : '?';
 
     /* Web Serial support */
-    addCheck(c,
+    window.EELab.addCheck(c,
       navigator.serial ? '\u2713' : '\u2717',
       navigator.serial ? 'pass'   : 'fail',
       navigator.serial ? 'Web Serial API supported' : 'Web Serial NOT supported',
@@ -372,26 +360,26 @@
 
     /* Connection */
     if (connected) {
-      addCheck(c, '\u2713', 'pass', 'Port open @ ' + baud + ' baud');
+      window.EELab.addCheck(c, '\u2713', 'pass', 'Port open @ ' + baud + ' baud');
     } else {
-      addCheck(c, '\u2717', 'fail', 'Not connected', 'Click Connect and select your Arduino COM port.');
+      window.EELab.addCheck(c, '\u2717', 'fail', 'Not connected', 'Click Connect and select your Arduino COM port.');
     }
 
     if (connected) {
       /* Data flow */
       var since = Date.now() - diag.lastByteTime;
       if (diag.bytesTotal === 0) {
-        addCheck(c, '\u2717', 'fail',
+        window.EELab.addCheck(c, '\u2717', 'fail',
           'No bytes received',
           'Wrong baud rate, or sketch is not running.'
         );
       } else if (since > 3000) {
-        addCheck(c, '\u26A0', 'warn',
+        window.EELab.addCheck(c, '\u26A0', 'warn',
           'Data stopped ' + Math.round(since / 1000) + 's ago',
           'Arduino may have reset. Try disconnecting and reconnecting.'
         );
       } else {
-        addCheck(c, '\u2713', 'pass',
+        window.EELab.addCheck(c, '\u2713', 'pass',
           diag.bytesTotal.toLocaleString() + ' bytes received',
           'Data is actively flowing from the Arduino.'
         );
@@ -402,7 +390,7 @@
         ? Math.min(100, Math.round(diag.framesTotal / (diag.bytesTotal / 4) * 100))
         : 0;
 
-      addCheck(c,
+      window.EELab.addCheck(c,
         health >= 80 ? '\u2713' : health >= 40 ? '\u26A0' : '\u2717',
         health >= 80 ? 'pass'   : health >= 40 ? 'warn'   : 'fail',
         'Frame health ' + health + '%',
@@ -414,7 +402,7 @@
       );
 
       /* Sync errors */
-      addCheck(c,
+      window.EELab.addCheck(c,
         diag.syncErrors === 0 ? '\u2713' : diag.syncErrors < 20 ? '\u26A0' : '\u2717',
         diag.syncErrors === 0 ? 'pass'   : diag.syncErrors < 20 ? 'warn'   : 'fail',
         diag.syncErrors + ' sync errors',
@@ -425,7 +413,7 @@
 
       /* CH2 frames */
       if (window.EEEngine.state.ch[1].enabled) {
-        addCheck(c,
+        window.EELab.addCheck(c,
           diag.frames2 > 10 ? '\u2713' : '\u26A0',
           diag.frames2 > 10 ? 'pass'   : 'warn',
           'CH2 frames: ' + diag.frames2,
@@ -439,7 +427,7 @@
       if (diag.framesTotal > 100) {
         var elapsed = Math.max(1, (Date.now() - diag.connectTime) / 1000);
         var sr      = Math.round(diag.framesTotal / elapsed);
-        addCheck(c,
+        window.EELab.addCheck(c,
           sr > 500 ? '\u2713' : '\u26A0',
           sr > 500 ? 'pass'   : 'warn',
           'Estimated sample rate: ' + sr.toLocaleString() + ' Hz',
@@ -645,9 +633,18 @@
     var slTb = $('sl-tb');
     if (slTb) {
       slTb.addEventListener('input', function () {
-        s.timebaseIdx = +slTb.value;
+        s.timebaseIdx = Math.max(0, Math.min(+slTb.value, window.EEEngine.TIMEBASE_MS.length - 1));
         var lbl = $('lbl-tb');
         if (lbl) lbl.textContent = fmtTime(window.EEEngine.TIMEBASE_MS[s.timebaseIdx]);
+      });
+    }
+
+    /* ── Autoscale ── */
+    var btnAutoscale = $('btn-autoscale');
+    if (btnAutoscale) {
+      btnAutoscale.addEventListener('click', function () {
+        window.EEEngine.autoscale();
+        log('Autoscale applied', 'ok');
       });
     }
 
@@ -811,6 +808,34 @@
     wireToggle('btn-interp', s, 'interpolate');
     wireToggle('btn-fill',   s, 'fill');
 
+    /* ── Reference waveform ── */
+    var btnRefStore = $('btn-ref-store');
+    var btnRefClear = $('btn-ref-clear');
+    if (btnRefStore) {
+      btnRefStore.addEventListener('click', function () {
+        window.EEEngine.captureRef();
+        btnRefStore.classList.add('is-active');
+        log('Reference trace stored', 'ok');
+      });
+    }
+    if (btnRefClear) {
+      btnRefClear.addEventListener('click', function () {
+        window.EEEngine.clearRef();
+        if (btnRefStore) btnRefStore.classList.remove('is-active');
+        log('Reference trace cleared');
+      });
+    }
+
+    /* ── Math channel (CH1 − CH2) ── */
+    var btnMath = $('btn-math');
+    if (btnMath) {
+      btnMath.addEventListener('click', function () {
+        s.mathEnabled = !s.mathEnabled;
+        btnMath.classList.toggle('is-active', s.mathEnabled);
+        log('Math channel ' + (s.mathEnabled ? 'ON' : 'OFF'));
+      });
+    }
+
     var slPersist = $('sl-persist');
     if (slPersist) {
       slPersist.addEventListener('input', function () {
@@ -921,12 +946,40 @@
    * EEEngine calls back into these functions to update the DOM
    * without needing to know anything about it directly.
    */
+  /* ── Sync slider labels after engine-driven changes (e.g. autoscale) ── */
+  function syncAutoscaleUI() {
+    var s = window.EEEngine.state;
+
+    var slTb = $('sl-tb');
+    if (slTb) {
+      slTb.value = s.timebaseIdx;
+      var lblTb = $('lbl-tb');
+      if (lblTb) lblTb.textContent = fmtTime(window.EEEngine.TIMEBASE_MS[s.timebaseIdx]);
+    }
+
+    var slVdiv = $('sl-ch1-vdiv');
+    if (slVdiv) {
+      slVdiv.value = s.ch[0].vdivIdx;
+      var v   = window.EEEngine.VDIV_V[s.ch[0].vdivIdx];
+      var lbl = $('lbl-ch1-vdiv');
+      if (lbl) lbl.textContent = (v < 1 ? v.toFixed(1) : v.toFixed(0)) + 'V';
+    }
+
+    var slOff = $('sl-ch1-off');
+    if (slOff) {
+      slOff.value = s.ch[0].offsetPct;
+      var lblOff = $('lbl-ch1-off');
+      if (lblOff) lblOff.textContent = s.ch[0].offsetPct + '%';
+    }
+  }
+
   window.EEControls = {
     updateMeasurements: updateMeasurements,
     updateOverlays:     updateOverlays,
     updateCursorPanel:  updateCursorPanel,
     setAvgProgress:     setAvgProgress,
     syncRunState:       syncRunState,
+    syncAutoscaleUI:    syncAutoscaleUI,
     log:                log
   };
 

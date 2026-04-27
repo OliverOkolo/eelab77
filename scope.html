@@ -362,6 +362,9 @@
         <input type="range" class="range" id="sl-tb"
                min="0" max="10" step="1" value="4">
       </div>
+      <div class="ctrl-btn-row">
+        <button class="btn btn--toggle" id="btn-autoscale">Autoscale</button>
+      </div>
     </div>
 
     <!-- ── Trigger ── -->
@@ -434,6 +437,16 @@
         <button class="btn btn--toggle"           id="btn-fft">FFT</button>
         <button class="btn btn--toggle is-active" id="btn-interp">Interp</button>
         <button class="btn btn--toggle"           id="btn-fill">Fill</button>
+      </div>
+      <div class="ctrl-btn-row">
+        <button class="btn btn--toggle" id="btn-ref-store"
+                title="Store current trace as reference">Store Ref</button>
+        <button class="btn btn--toggle" id="btn-ref-clear"
+                title="Clear stored reference trace">Clear Ref</button>
+      </div>
+      <div class="ctrl-btn-row">
+        <button class="btn btn--toggle" id="btn-math"
+                title="Show CH1 − CH2 math channel">Math CH1−CH2</button>
       </div>
       <div class="ctrl-row">
         <div class="form-label">
@@ -564,6 +577,7 @@
      6. scope-controls.js UI wiring     (EEControls)
      7. nav.js            active link
 ════════════════════════════════════════════════════════ -->
+<script src="assets/js/eelab-shared.js"></script>
 <script src="assets/js/scope-sketch.js"></script>
 <script src="assets/js/scope-serial.js"></script>
 <script src="assets/js/scope-engine.js"></script>

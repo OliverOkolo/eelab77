@@ -134,6 +134,13 @@
           /* Complete valid frame — deliver it */
           var value = (parseHi << 8) | parseLo;
 
+          /* Sanity: mode must still be in valid range (catches mid-frame corruption) */
+          if (parseMode < 0x01 || parseMode > 0x07) {
+            diag.syncErrors++;
+            parseState = 0;
+            break;
+          }
+
           diag.framesTotal++;
           diag.framesWindow++;
           diag.lastFrameTime = Date.now();

@@ -158,9 +158,25 @@
     var actFmin = (stepMin * 1e6 / (65536 * loopUs)).toFixed(1);
     var actFmax = (stepMax * 1e6 / (65536 * loopUs)).toFixed(1);
 
-    setText('info-stepmin',   stepMin.toString());
-    setText('info-stepmax',   stepMax.toString());
-    setText('info-freqrange', actFmin + '\u2013' + actFmax + ' Hz');
+    setText('info-stepmin', stepMin.toString());
+    setText('info-stepmax', stepMax.toString());
+
+    /* Warn when integer rounding shifts fmin or fmax by more than 5% */
+    var devMin = fMin > 0 ? Math.abs(parseFloat(actFmin) - fMin) / fMin * 100 : 0;
+    var devMax = fMax > 0 ? Math.abs(parseFloat(actFmax) - fMax) / fMax * 100 : 0;
+    var freqRangeEl = document.getElementById('info-freqrange');
+    if (freqRangeEl) {
+      freqRangeEl.textContent = actFmin + '\u2013' + actFmax + ' Hz';
+      if (devMin > 5 || devMax > 5) {
+        freqRangeEl.style.color  = 'var(--color-amber, #F5A623)';
+        freqRangeEl.title = 'Actual frequencies differ from requested by >' +
+          Math.max(devMin, devMax).toFixed(0) + '% due to integer step rounding. ' +
+          'Increase loop delay or lower the frequency range to reduce quantisation.';
+      } else {
+        freqRangeEl.style.color  = '';
+        freqRangeEl.title = '';
+      }
+    }
 
     /* ── RC filter calculation ── */
     /*
